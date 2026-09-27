@@ -81,7 +81,7 @@ function publicUser(u){
  return {google_sub:u.google_sub,email:u.email,name:u.name,picture:u.picture,coins:u.coins,wins:u.wins,games:u.games,collected:u.collected,ownedThemes:u.owned_themes,equipped:u.equipped_theme,revision:Number(u.revision)};
 }
 async function upsertUser(p){
- const r=await pool.query('INSERT INTO users (google_sub,email,name,picture) VALUES ($1,$2,$3,$4) ON CONFLICT (google_sub) DO UPDATE SET email=EXCLUDED.email,name=EXCLUDED.name,picture=EXCLUDED.picture,updated_at=NOW() RETURNING *',[p.sub,p.email||'',p.name||null,p.picture||null]);
+ const r=await pool.query('INSERT INTO users (google_sub,email,name,picture,coins) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (google_sub) DO UPDATE SET email=EXCLUDED.email,name=EXCLUDED.name,picture=EXCLUDED.picture,updated_at=NOW() RETURNING *',[p.sub,p.email||'',p.name||null,p.picture||null,isAdminUser(p)?2147483647:20]);
  return r.rows[0];
 }
 app.post('/api/auth/sync', requireAuth, async (req,res)=>{
@@ -99,6 +99,7 @@ app.post('/api/save', requireAuth, async (req,res)=>{
   const v=nums.map(k=>Math.max(0,Math.floor(Number(d[k]??0))));
   const themes=Array.isArray(d.ownedThemes)?d.ownedThemes.slice(0,50):['classic'];
   const equipped=typeof d.equippedTheme==='string'?d.equippedTheme.slice(0,50):'classic';
+  const isAdmin=isAdminUser(req.user); if(isAdmin)v[0]=2147483647;
   const r=await pool.query('UPDATE users SET coins=$2,wins=$3,games=$4,collected=$5,owned_themes=$6,equipped_theme=$7,revision=revision+1,updated_at=NOW() WHERE google_sub=$1 RETURNING *',[req.user.sub,...v,JSON.stringify(themes),equipped]);
   if(!r.rowCount){const n=await upsertUser(req.user);return res.json({user:publicUser(n)});}
   res.json({user:publicUser(r.rows[0])});
