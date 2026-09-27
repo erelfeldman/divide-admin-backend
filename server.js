@@ -148,6 +148,20 @@ app.post('/api/social/posts/:id/comments', requireAuth, async (req,res)=>{
   res.json({comment:r.rows[0]});
  }catch(e){res.status(400).json({error:'invalid post'});}
 });
+app.get('/api/social/leaderboard', requireAuth, async (req,res)=>{
+ try{const r=await pool.query('SELECT name,email,picture,wins,games,collected,coins FROM users ORDER BY wins DESC,collected DESC LIMIT 50');res.json({users:r.rows});}
+ catch(e){res.status(500).json({error:'database error'});}
+});
+app.get('/api/social/players', requireAuth, async (req,res)=>{
+ const q=String(req.query.q||'').trim().slice(0,80);
+ try{const r=await pool.query("SELECT google_sub,name,email,picture,wins,games,collected FROM users WHERE google_sub<>$1 AND ($2='' OR name ILIKE '%'||$2||'%' OR email ILIKE '%'||$2||'%') ORDER BY name NULLS LAST LIMIT 30",[req.user.sub,q]);res.json({players:r.rows});}
+ catch(e){res.status(500).json({error:'database error'});}
+});
+app.post('/api/social/follow/:sub', requireAuth, async (req,res)=>{
+ if(req.params.sub===req.user.sub)return res.status(400).json({error:'cannot follow yourself'});
+ try{const r=await pool.query('INSERT INTO social_follows (follower_sub,followed_sub) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING follower_sub',[req.user.sub,req.params.sub]);if(!r.rowCount){await pool.query('DELETE FROM social_follows WHERE follower_sub=$1 AND followed_sub=$2',[req.user.sub,req.params.sub]);return res.json({following:false});}res.json({following:true});}
+ catch(e){res.status(400).json({error:'player not found'});}
+});
 app.get('/api/is-admin', requireAuth, (req, res) => {
   res.json({ isAdmin: isAdminUser(req.user) });
 });
@@ -182,5 +196,6 @@ async function initDb(){
   await pool.query("CREATE TABLE IF NOT EXISTS social_posts (id BIGSERIAL PRIMARY KEY,google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 500),created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
   await pool.query("CREATE TABLE IF NOT EXISTS social_likes (post_id BIGINT NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(post_id,google_sub))");
   await pool.query("CREATE TABLE IF NOT EXISTS social_comments (id BIGSERIAL PRIMARY KEY,post_id BIGINT NOT NULL REFERENCES social_posts(id) ON DELETE CASCADE,google_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,body TEXT NOT NULL CHECK (char_length(body) BETWEEN 1 AND 300),created_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
+  await pool.query("CREATE TABLE IF NOT EXISTS social_follows (follower_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,followed_sub TEXT NOT NULL REFERENCES users(google_sub) ON DELETE CASCADE,created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),PRIMARY KEY(follower_sub,followed_sub),CHECK (follower_sub<>followed_sub))");
 }
 initDb().then(()=>app.listen(port,()=>console.log('Divide server running on :'+port))).catch(e=>{console.error(e);process.exit(1);});
