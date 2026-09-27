@@ -10,9 +10,15 @@
  */
 const express = require('express');
 const { OAuth2Client } = require('google-auth-library');
+const { Pool } = require('pg');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;   // from Google Cloud Console
 const ADMIN_UID = process.env.ADMIN_UID;                 // YOUR Google account's UID only. Never in frontend code.
+const DATABASE_URL = process.env.DATABASE_URL;
+const pool = DATABASE_URL ? new Pool({
+  connectionString: DATABASE_URL,
+  ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
+}) : null;
 
 if (!GOOGLE_CLIENT_ID || !ADMIN_UID) {
   throw new Error('Set GOOGLE_CLIENT_ID and ADMIN_UID as server environment variables (never hardcode in a file you commit or ship to the browser).');
@@ -20,7 +26,8 @@ if (!GOOGLE_CLIENT_ID || !ADMIN_UID) {
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
 const app = express();
-app.use(express.json());
+app.use(express.json({ limit: '256kb' }));
+app.use(require('express').static(require('path').join(__dirname, 'public')));
 
 /**
  * Verifies the Google ID token's signature and issuer with Google itself
@@ -53,15 +60,34 @@ function requireAdmin(req, res, next) {
 // Any logged-in user can ask "am I admin?" — the frontend uses this only
 // to decide whether to SHOW the Admin Panel button. Hiding it is cosmetic;
 // requireAdmin on the real endpoints below is what actually enforces it.
+app.get('/api/health', async (req, res) => {
+  try {
+    if (!pool) return res.status(503).json({ ok: false, database: false, googleAuth: !!GOOGLE_CLIENT_ID });
+    await pool.query('SELECT 1');
+    res.json({ ok: true, database: true, googleAuth: !!GOOGLE_CLIENT_ID });
+  } catch { res.status(503).json({ ok: false, database: false, googleAuth: !!GOOGLE_CLIENT_ID }); }
+});
+
+app.get('/api/config', (req, res) => {
+  res.json({ googleClientId: GOOGLE_CLIENT_ID || null });
+});
+
 app.get('/api/is-admin', requireAuth, (req, res) => {
   res.json({ isAdmin: req.user.sub === ADMIN_UID });
 });
 
 // Example protected admin action. Every admin route MUST use both
 // requireAuth and requireAdmin — never trust a client-supplied "role" field.
-app.post('/api/admin/reset-user-coins', requireAuth, requireAdmin, (req, res) => {
-  // ... perform the privileged action here ...
-  res.json({ ok: true });
+app.post('/api/admin/reset-user-coins', requireAuth, requireAdmin, async (req, res) => {
+  const googleSub = String(req.body?.googleSub || '');
+  if (!googleSub) return res.status(400).json({ error: 'googleSub required' });
+  if (!pool) return res.status(503).json({ error: 'database not configured' });
+  try {
+    const result = await pool.query('UPDATE users SET coins=0,revision=revision+1,updated_at=NOW() WHERE google_sub=$1 RETURNING *', [googleSub]);
+    if (!result.rowCount) return res.status(404).json({ error: 'user not found' });
+    const u=result.rows[0];
+    res.json({ ok:true, user:{google_sub:u.google_sub,email:u.email,name:u.name,coins:u.coins,wins:u.wins,games:u.games,collected:u.collected,ownedThemes:u.owned_themes,equipped:u.equipped_theme,revision:Number(u.revision)} });
+  } catch(e) { console.error(e); res.status(500).json({ error:'database error' }); }
 });
 
 // There is intentionally NO endpoint anywhere that can change ADMIN_UID,
@@ -69,5 +95,13 @@ app.post('/api/admin/reset-user-coins', requireAuth, requireAdmin, (req, res) =>
 // value. Admin status is a fixed constant on the server, not stored data
 // that any request (including from the admin) can edit.
 
+app.get('*', (req,res) => {
+  res.sendFile(require('path').join(__dirname,'public','divide.html'));
+});
+
 const port = process.env.PORT || 3000;
-app.listen(port, () => console.log('Admin-check server running on :' + port));
+async function initDb(){
+  if(!pool) return;
+  await pool.query('CREATE TABLE IF NOT EXISTS users (google_sub TEXT PRIMARY KEY,email TEXT NOT NULL,name TEXT,picture TEXT,coins INTEGER NOT NULL DEFAULT 20,wins INTEGER NOT NULL DEFAULT 0,games INTEGER NOT NULL DEFAULT 0,collected INTEGER NOT NULL DEFAULT 0,owned_themes JSONB NOT NULL DEFAULT '[\"classic\"]'::jsonb,equipped_theme TEXT NOT NULL DEFAULT 'classic',revision BIGINT NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+}
+initDb().then(()=>app.listen(port,()=>console.log('Divide server running on :'+port))).catch(e=>{console.error(e);process.exit(1);});
