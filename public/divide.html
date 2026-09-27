@@ -1,0 +1,734 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Divide - משחק קלפים</title><script src="https://accounts.google.com/gsi/client" async defer></script>
+<style>
+:root{
+ --felt:#0b5d3b;--felt2:#0a4f31;--gold:#e8c547;--card-bg:#fdfdfd;--ink:#151515;
+ --bg:#07351f;--panel:rgba(0,0,0,.28);--panel2:rgba(0,0,0,.42);--txt:#fff;
+ --backA:#1b3a63;--backB:#0e2038;--accent:#e8c547;
+ --anim-speed:1;
+ padding-top:env(safe-area-inset-top,0);padding-bottom:env(safe-area-inset-bottom,0);
+}
+:root[data-mode="light"]{--bg:#dfe9e2;--panel:rgba(255,255,255,.55);--panel2:rgba(255,255,255,.75);--txt:#12241a;--felt:#1f7a4d;--felt2:#186a41}
+:root[data-contrast="high"]{--gold:#ffdd33;--txt:#fff;--panel:rgba(0,0,0,.6)}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:'Segoe UI',Arial,sans-serif;background:radial-gradient(ellipse at center,var(--felt) 0%,var(--bg) 100%);color:var(--txt);overflow-x:hidden}
+body.large-text{font-size:1.18em}
+body.reduced-motion *{animation-duration:.01s!important;transition-duration:.05s!important}
+#app{display:flex;flex-direction:column;height:100%;min-height:100vh;position:relative}
+.hidden{display:none!important}
+button{background:linear-gradient(180deg,var(--gold),#c79f2e);color:#221a00;border:none;border-radius:10px;padding:10px 18px;font-size:1em;font-weight:bold;cursor:pointer;box-shadow:0 3px 0 #7d631d,0 4px 8px rgba(0,0,0,.3);transition:transform .12s}
+button:hover{transform:translateY(-1px)}
+button:active{transform:translateY(2px);box-shadow:0 1px 0 #7d631d}
+button.sel{background:#fff;outline:3px solid var(--gold)}
+button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
+button.ghost{background:transparent;border:2px solid var(--gold);color:var(--gold);box-shadow:none}
+.btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+/* ---- setup / menu ---- */
+#setup{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100%;gap:14px;text-align:center;padding:24px 14px}
+#setup h1{font-size:2.4em;color:var(--gold);margin:6px 0;text-shadow:0 2px 6px rgba(0,0,0,.5)}
+.tabs{display:flex;gap:6px;background:var(--panel);padding:6px;border-radius:14px}
+.tabs button{padding:8px 16px}
+.tabbtn.active{outline:3px solid #fff}
+.panel{background:var(--panel);border-radius:16px;padding:16px;max-width:640px;width:100%;box-shadow:0 6px 20px rgba(0,0,0,.35)}
+.rulesbox{max-width:560px;font-size:.85em;opacity:.9;text-align:right}
+/* ---- top bar ---- */
+#top{display:flex;justify-content:space-around;flex-wrap:wrap;gap:6px;padding:10px;background:var(--panel)}
+.pcard{background:var(--panel2);border-radius:12px;padding:8px 12px;min-width:120px;text-align:center;border:2px solid transparent;transition:border-color .2s,box-shadow .2s;position:relative}
+.pcard.turn{border-color:var(--gold);box-shadow:0 0 16px 2px var(--gold);animation:pulseTurn 1.4s ease-in-out infinite}
+@keyframes pulseTurn{0%,100%{box-shadow:0 0 10px 1px var(--gold)}50%{box-shadow:0 0 20px 4px var(--gold)}}
+.pcard.out{opacity:.35}
+.pname{font-weight:bold}
+.small{font-size:.8em;opacity:.9}
+.turnarrow{position:absolute;top:-14px;right:50%;transform:translateX(50%);font-size:1.1em}
+/* ---- middle table ---- */
+#mid{flex:1;display:flex;align-items:center;justify-content:center;gap:26px;padding:14px;flex-wrap:wrap}
+#pileArea,#deckArea{display:flex;flex-direction:column;align-items:center;gap:8px}
+#relText{background:var(--panel2);padding:8px 14px;border-radius:10px;font-size:.9em;max-width:80vw;text-align:center;min-height:1.4em}
+.card{width:66px;height:94px;background:var(--card-bg);border-radius:9px;display:flex;flex-direction:column;justify-content:space-between;padding:4px 6px;color:var(--ink);font-weight:bold;font-size:1.1em;cursor:pointer;user-select:none;transition:transform .18s,box-shadow .18s;box-shadow:0 3px 6px rgba(0,0,0,.45),0 1px 0 #fff inset;position:relative;border:1px solid #d8d8d8}
+.card.red{color:#c0272d}
+.card.pile{cursor:default}
+.card.playable:hover{transform:translateY(-6px) scale(1.04);box-shadow:0 0 0 3px var(--gold),0 8px 14px rgba(0,0,0,.5)}
+.card.selected{outline:3px solid var(--gold);transform:translateY(-14px);box-shadow:0 0 14px 2px var(--gold)}
+.card.ace-flash{animation:aceFlash .6s ease}
+@keyframes aceFlash{0%{box-shadow:0 0 0 0 gold}50%{box-shadow:0 0 24px 8px gold}100%{box-shadow:0 3px 6px rgba(0,0,0,.45)}}
+.card.two-mirror{animation:twoSpin .5s ease}
+@keyframes twoSpin{0%{transform:rotateY(0)}100%{transform:rotateY(360deg)}}
+.badge{position:absolute;top:-8px;right:-8px;background:var(--gold);color:#221a00;border-radius:50%;width:20px;height:20px;font-size:.7em;display:flex;align-items:center;justify-content:center;font-weight:bold}
+.cardback{width:66px;height:94px;border-radius:9px;background:linear-gradient(135deg,var(--backA),var(--backB));box-shadow:0 3px 6px rgba(0,0,0,.5),inset 0 0 0 2px rgba(255,255,255,.15);position:relative;background-image:radial-gradient(circle,rgba(255,255,255,.08) 2px,transparent 2.5px);background-size:12px 12px}
+#deckCount{font-size:.85em;background:var(--panel2);padding:3px 10px;border-radius:8px}
+#pileStack{position:relative;width:76px;height:100px}
+#hand{display:flex;gap:6px;flex-wrap:wrap;justify-content:center;padding:14px;background:var(--panel);min-height:118px;align-items:flex-end}
+#controls{display:flex;gap:10px;justify-content:center;padding:10px;flex-wrap:wrap}
+@media(max-width:480px){.card,.cardback{width:50px;height:74px;font-size:.85em}}
+/* ---- flying card for animations ---- */
+.flyer{position:fixed;z-index:999;transition:transform var(--flydur,.55s) cubic-bezier(.3,.6,.3,1),opacity var(--flydur,.55s);pointer-events:none}
+/* ---- toasts ---- */
+#toasts{position:fixed;top:calc(10px + env(safe-area-inset-top,0));left:50%;transform:translateX(-50%);display:flex;flex-direction:column;gap:6px;z-index:1200;align-items:center}
+.toast{background:var(--panel2);border:1px solid var(--gold);padding:8px 16px;border-radius:10px;font-size:.9em;animation:toastIn .25s ease, toastOut .3s ease 2.2s forwards}
+@keyframes toastIn{from{opacity:0;transform:translateY(-10px)}to{opacity:1;transform:translateY(0)}}
+@keyframes toastOut{to{opacity:0;transform:translateY(-8px)}}
+/* ---- banner (round/coinflip overlays) ---- */
+#banner,#coinflip{position:fixed;inset:0;background:rgba(0,0,0,.6);display:flex;align-items:center;justify-content:center;z-index:1100;flex-direction:column;gap:16px;text-align:center}
+.bannerbox{background:var(--panel2);padding:26px 36px;border-radius:18px;font-size:1.3em;box-shadow:0 10px 30px rgba(0,0,0,.5);animation:popIn .35s ease}
+@keyframes popIn{from{transform:scale(.7);opacity:0}to{transform:scale(1);opacity:1}}
+.coin{width:110px;height:110px;border-radius:50%;background:radial-gradient(circle at 35% 30%,#fff6c9,var(--gold) 60%,#8a6d16);display:flex;align-items:center;justify-content:center;font-size:2.4em;box-shadow:0 6px 20px rgba(0,0,0,.5);transform-style:preserve-3d}
+.coin.spin{animation:coinSpin 1.6s cubic-bezier(.2,.6,.3,1)}
+@keyframes coinSpin{0%{transform:rotateY(0)}100%{transform:rotateY(1800deg)}}
+.playerchip{background:var(--panel);padding:6px 14px;border-radius:10px;margin:2px}
+/* ---- shop ---- */
+.themegrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:12px;margin-top:10px}
+.themecard{background:var(--panel2);border-radius:12px;padding:10px;text-align:center}
+.swatch{width:100%;height:70px;border-radius:8px;margin-bottom:6px;box-shadow:inset 0 0 0 2px rgba(255,255,255,.2)}
+/* ---- settings ---- */
+.setrow{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.1);gap:10px;flex-wrap:wrap}
+input[type=range]{width:140px}
+.authbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--panel2);text-align:center}.authstatus{margin:8px 0;font-size:.9em}#adminPanel{margin-top:14px;text-align:right}.adminuser{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.12);flex-wrap:wrap}.adminuser button{margin:0}</style>
+</head>
+<body>
+<div id="app">
+
+ <div id="setup">
+  <h1>🃏 Divide</h1>
+  <div class="tabs">
+   <button class="tabbtn active" data-tab="play">משחק</button>
+   <button class="tabbtn" data-tab="shop">חנות</button>
+   <button class="tabbtn" data-tab="settings">הגדרות</button>
+   <button class="tabbtn" data-tab="profile">פרופיל</button>
+  </div>
+
+  <div class="panel" id="tab-play">
+   <div>מספר שחקנים (אתה + AI):</div>
+   <div class="btnrow" id="pcount" style="margin:10px 0"></div>
+   <button id="startBtn">התחל משחק (הטלת מטבע)</button>
+   <div class="rulesbox" style="margin-top:14px">
+    כל שחקן מתחיל עם 5 קלפים. יש להניח קלף (או שילוב קלפים שסכומו) גדול/שווה ומתחלק ללא שארית בקלף העליון הרלוונטי.
+    A אפשר על הכל ומאפס את הדרישה. 2 אפשר על הכל, אך מתייחסים לקלף שמתחתיו. שחקן ללא מהלך יוצא מהסבב.
+    האחרון שנשאר לוקח את הערימה, השחקן שפתח את הסבב שהסתיים משלים קלפים ראשון, אחריו לפי כיוון השעון, ומי שלקח את הערימה פותח את הסבב הבא.
+    המנצח הוא מי שצבר הכי הרבה קלפים.
+   </div>
+  </div>
+
+  <div class="panel hidden" id="tab-shop">
+   <div>מטבעות: <b id="coinsShop">0</b></div>
+   <div class="themegrid" id="themeGrid"></div>
+  </div>
+
+  <div class="panel hidden" id="tab-settings">
+   <div class="setrow"><span>מצב תצוגה</span><span class="btnrow">
+     <button data-mode="light">בהיר</button><button data-mode="dark">כהה</button><button data-mode="system">מערכת</button></span></div>
+   <div class="setrow"><span>צלילים</span><label><input type="checkbox" id="soundOn"> מופעל</label></div>
+   <div class="setrow"><span>מוזיקת רקע</span><label><input type="checkbox" id="musicOn"> מופעל</label></div>
+   <div class="setrow"><span>עוצמת אפקטים</span><input type="range" id="volFx" min="0" max="1" step="0.05"></div>
+   <div class="setrow"><span>איכות אנימציות</span><span class="btnrow">
+     <button data-q="low">נמוכה</button><button data-q="med">בינונית</button><button data-q="high">גבוהה</button></span></div>
+   <div class="setrow"><span>טקסט גדול</span><label><input type="checkbox" id="largeText"></label></div>
+   <div class="setrow"><span>ניגודיות גבוהה</span><label><input type="checkbox" id="highContrast"></label></div>
+   <div class="setrow"><span>צמצום אנימציות</span><label><input type="checkbox" id="reducedMotion"></label></div>
+   <div class="setrow"><button id="resetSettings" class="ghost">אפס הגדרות</button></div>
+  </div>
+
+  <div class="panel hidden" id="tab-profile">
+   <div style="font-size:1.3em;font-weight:bold" id="profileTitle">אורח 👤</div>
+   <div class="authbox"><div id="googleSignInBtn"></div><div class="authstatus" id="authStatus">לא מחובר — הנתונים נשמרים מקומית במכשיר.</div></div>
+   <div>ניצחונות: <b id="pWins">0</b> | משחקים: <b id="pGames">0</b> | קלפים שנצברו סה"כ: <b id="pCollected">0</b> | מטבעות: <b id="pCoins">0</b></div>
+   <div style="margin-top:8px">עיצוב מצויד: <b id="pTheme">Classic</b></div>
+   <div id="adminPanel" class="hidden"><h3>🛠️ Admin Panel</h3><div id="adminStatus" class="small">טוען משתמשים...</div><div id="adminUsers"></div></div>
+  </div>
+ </div>
+
+ <div id="game" class="hidden" style="display:none;flex-direction:column;height:100%">
+  <div id="top"></div>
+  <div id="mid">
+   <div id="deckArea">
+    <div class="cardback" id="deckVisual"></div>
+    <div id="deckCount">בחפיסה: 40</div>
+   </div>
+   <div id="pileArea"><div id="pileStack"></div><div id="relText"></div></div>
+  </div>
+  <div id="hand"></div>
+  <div id="controls">
+   <button id="playBtn">הנח קלפים</button>
+   <button id="noMoveBtn" class="hidden">אין לי מהלך</button>
+   <button id="newGameBtn" class="ghost">תפריט ראשי</button>
+  </div>
+ </div>
+
+ <div id="toasts"></div>
+</div>
+<script>
+/* =============== SOUND (procedural, no external assets) =============== */
+const Sound=(()=>{
+ let ctx=null;
+ function ac(){ if(!ctx) ctx=new (window.AudioContext||window.webkitAudioContext)(); return ctx; }
+ function beep(freq,dur,type='sine',gain=.15){
+  if(!Settings.data.sound) return;
+  try{
+   const c=ac(); const o=c.createOscillator(); const g=c.createGain();
+   o.type=type; o.frequency.value=freq; g.gain.value=gain*Settings.data.volFx;
+   o.connect(g); g.connect(c.destination); o.start();
+   g.gain.exponentialRampToValueAtTime(.001, c.currentTime+dur);
+   o.stop(c.currentTime+dur);
+  }catch(e){}
+ }
+ return {
+  play:()=>beep(520,.12), draw:()=>beep(760,.08,'triangle',.1), coin:()=>beep(440,.3,'square',.12),
+  win:()=>beep(880,.35,'sawtooth',.12), roundEnd:()=>beep(300,.4,'sine',.15), buy:()=>beep(1000,.2,'triangle',.14),
+  error:()=>beep(140,.25,'square',.18)
+ };
+})();
+
+/* =============== SAVE / SETTINGS / SHOP (local persistence) =============== */
+const SAVE_KEY='divide_save_v1';
+function loadSave(){
+ try{ return JSON.parse(localStorage.getItem(SAVE_KEY))||null; }catch(e){ return null; }
+}
+function defaultSave(){
+ return {
+  coins:20, ownedThemes:['classic'], equipped:'classic',
+  stats:{wins:0,games:0,collected:0},
+  settings:{mode:'system',sound:true,music:false,volFx:.7,quality:'high',largeText:false,highContrast:false,reducedMotion:false}
+ };
+}
+let SAVEDATA = loadSave() || defaultSave();
+if(!Number.isFinite(Number(SAVEDATA.serverRevision))) SAVEDATA.serverRevision=0;
+let authToken=null,authUser=null,saveTimer=null,syncingServerData=false;
+function persist(){
+ localStorage.setItem(SAVE_KEY,JSON.stringify(SAVEDATA));
+ if(authToken&&!syncingServerData){clearTimeout(saveTimer);saveTimer=setTimeout(saveToServer,450);}
+}
+function applyServerUser(user){
+ syncingServerData=true;
+ SAVEDATA.coins=Number(user.coins)||0;
+ SAVEDATA.stats={wins:Number(user.wins)||0,games:Number(user.games)||0,collected:Number(user.collected)||0};
+ SAVEDATA.ownedThemes=Array.isArray(user.ownedThemes)?user.ownedThemes:['classic'];
+ SAVEDATA.equipped=user.equipped||'classic';
+ SAVEDATA.serverRevision=Number(user.revision)||0;
+ localStorage.setItem(SAVE_KEY,JSON.stringify(SAVEDATA));
+ syncingServerData=false;
+ const t=THEMES.find(x=>x.id===SAVEDATA.equipped)||THEMES[0];
+ document.documentElement.style.setProperty('--backA',t.backA);
+ document.documentElement.style.setProperty('--backB',t.backB);
+ renderShop();renderProfile();
+}
+async function saveToServer(){
+ if(!authToken)return;
+ try{
+  const r=await fetch('/api/save',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},
+   body:JSON.stringify({coins:SAVEDATA.coins,wins:SAVEDATA.stats.wins,games:SAVEDATA.stats.games,collected:SAVEDATA.stats.collected,ownedThemes:SAVEDATA.ownedThemes,equippedTheme:SAVEDATA.equipped,revision:Number(SAVEDATA.serverRevision)||0})});
+  const d=await r.json();
+  if(r.status===409&&d.user){applyServerUser(d.user);toast('הנתונים עודכנו מהשרת');return;}
+  if(!r.ok)throw new Error(d.error||'save failed');
+  if(d.user){SAVEDATA.serverRevision=Number(d.user.revision)||0;localStorage.setItem(SAVE_KEY,JSON.stringify(SAVEDATA));}
+ }catch(e){console.warn('Server save failed:',e);}
+}
+
+const THEMES=[
+ {id:'classic',name:'Classic',price:0,backA:'#1b3a63',backB:'#0e2038'},
+ {id:'dark',name:'Dark',price:50,backA:'#2b2b2b',backB:'#050505'},
+ {id:'fire',name:'Fire',price:80,backA:'#ff7b39',backB:'#8a0e0e'},
+ {id:'ice',name:'Ice',price:80,backA:'#bfe9ff',backB:'#1c6fa3'},
+ {id:'galaxy',name:'Galaxy',price:120,backA:'#7b2ff7',backB:'#0d0221'},
+ {id:'neon',name:'Neon',price:120,backA:'#ff2fd0',backB:'#00e5ff'},
+];
+const Settings={
+ data:SAVEDATA.settings,
+ apply(){
+  const root=document.documentElement;
+  let mode=this.data.mode;
+  if(mode==='system') mode = window.matchMedia('(prefers-color-scheme: dark)').matches?'dark':'light';
+  root.setAttribute('data-mode', mode==='light'?'light':'dark');
+  root.setAttribute('data-contrast', this.data.highContrast?'high':'normal');
+  document.body.classList.toggle('large-text', this.data.largeText);
+  document.body.classList.toggle('reduced-motion', this.data.reducedMotion);
+  document.getElementById('soundOn').checked=this.data.sound;
+  document.getElementById('musicOn').checked=this.data.music;
+  document.getElementById('volFx').value=this.data.volFx;
+  document.getElementById('largeText').checked=this.data.largeText;
+  document.getElementById('highContrast').checked=this.data.highContrast;
+  document.getElementById('reducedMotion').checked=this.data.reducedMotion;
+  persist();
+ }
+};
+const Shop={
+ equipTheme(id){
+  const t=THEMES.find(x=>x.id===id); if(!t) return;
+  document.documentElement.style.setProperty('--backA',t.backA);
+  document.documentElement.style.setProperty('--backB',t.backB);
+  SAVEDATA.equipped=id; persist(); renderShop(); renderProfile();
+ },
+ buy(id){
+  const t=THEMES.find(x=>x.id===id); if(!t) return;
+  if(SAVEDATA.ownedThemes.includes(id)) return;
+  if(SAVEDATA.coins<t.price){ toast('אין מספיק מטבעות'); Sound.error(); return; }
+  SAVEDATA.coins-=t.price; SAVEDATA.ownedThemes.push(id); persist(); Sound.buy();
+  toast(`נרכש עיצוב ${t.name}!`); renderShop(); renderProfile();
+ }
+};
+function renderShop(){
+ document.getElementById('coinsShop').textContent=SAVEDATA.coins;
+ const g=document.getElementById('themeGrid'); g.innerHTML='';
+ THEMES.forEach(t=>{
+  const owned=SAVEDATA.ownedThemes.includes(t.id);
+  const equipped=SAVEDATA.equipped===t.id;
+  const d=document.createElement('div'); d.className='themecard';
+  d.innerHTML=`<div class="swatch" style="background:linear-gradient(135deg,${t.backA},${t.backB})"></div>
+   <div><b>${t.name}</b></div><div class="small">${t.price===0?'חינם':t.price+' 🪙'}</div>`;
+  const btn=document.createElement('button');
+  if(equipped){ btn.textContent='מצויד ✓'; btn.disabled=true; }
+  else if(owned){ btn.textContent='צייד'; btn.onclick=()=>Shop.equipTheme(t.id); }
+  else { btn.textContent='קנה'; btn.onclick=()=>Shop.buy(t.id); }
+  d.appendChild(btn); g.appendChild(d);
+ });
+}
+function renderProfile(){
+ document.getElementById('pWins').textContent=SAVEDATA.stats.wins;
+ document.getElementById('pGames').textContent=SAVEDATA.stats.games;
+ document.getElementById('pCollected').textContent=SAVEDATA.stats.collected;
+ document.getElementById('pCoins').textContent=SAVEDATA.coins;
+ document.getElementById('pTheme').textContent=THEMES.find(t=>t.id===SAVEDATA.equipped).name;
+}
+function toast(msg){
+ const box=document.getElementById('toasts');
+ const el=document.createElement('div'); el.className='toast'; el.textContent=msg;
+ box.appendChild(el); setTimeout(()=>el.remove(),2600);
+}
+
+/* =============== RULES (pure game logic - unchanged core rules) =============== */
+const SUITS=['♠','♥','♦','♣'];
+function rankLabel(r){return r<=10?String(r):({11:'J',12:'Q',13:'K',14:'A'})[r];}
+const Rules={
+ // computes the "relevant" top card, skipping through consecutive 2s ("mirror"),
+ // and treating an Ace top as a free/open state (requirement reset)
+ getRelevantCard(pile){
+  if(!pile.length) return {t:'free'};
+  let i=pile.length-1;
+  while(i>=0 && pile[i].r===2) i--; // 2 = mirror: look through to the card beneath
+  if(i<0) return {t:'free'};
+  const c=pile[i];
+  if(c.r===14) return {t:'free'}; // Ace = wild reset
+  return {t:'val',v:c.r};
+ },
+ isDivisible(sum,val){ return sum>=val && sum%val===0; },
+ isValidSingle(c,rel){
+  if(rel.t==='free') return true;
+  if(c.r===14||c.r===2) return true; // Ace & 2 always playable (special wilds)
+  return this.isDivisible(c.r, rel.v);
+ },
+ // finds smallest valid multi-card combo (Aces excluded - they can't be summed)
+ findCombo(hand,rel){
+  if(rel.t!=='val') return null;
+  const cards=hand.filter(c=>c.r!==14);
+  const n=cards.length, target=rel.v;
+  let best=null;
+  (function dfs(start,cur,sum){
+   if(cur.length>=2 && sum>=target && sum%target===0){ if(!best||cur.length<best.length) best=cur.slice(); }
+   if(best && best.length===2) return;
+   for(let i=start;i<n;i++){ cur.push(cards[i]); dfs(i+1,cur,sum+cards[i].r); cur.pop(); }
+  })(0,[],0);
+  return best;
+ },
+ isValidCombo(cards,rel){
+  if(cards.some(c=>c.r===14)) return false;
+  const sum=cards.reduce((a,c)=>a+c.r,0);
+  if(rel.t==='free') return true;
+  return this.isDivisible(sum, rel.v);
+ },
+ isValidPlay(cards,rel){
+  if(!cards.length) return false;
+  if(cards.length===1) return this.isValidSingle(cards[0],rel);
+  return this.isValidCombo(cards,rel);
+ },
+ hasLegalMove(hand,rel){
+  if(!hand.length) return false;
+  if(rel.t==='free') return true;
+  if(hand.some(c=>this.isValidSingle(c,rel))) return true;
+  return !!this.findCombo(hand,rel);
+ }
+};
+
+/* =============== DECK (real object, not just decoration) =============== */
+const Deck={
+ cards:[],
+ init(){ this.cards=[]; for(const s of SUITS) for(let r=2;r<=14;r++) this.cards.push({s,r,id:s+r+Math.random()}); this.shuffle(); },
+ shuffle(){ const a=this.cards; for(let i=a.length-1;i>0;i--){ const j=(Math.random()*(i+1))|0; [a[i],a[j]]=[a[j],a[i]]; } },
+ remaining(){ return this.cards.length; },
+ draw(){ return this.cards.pop(); }
+};
+
+/* =============== AI =============== */
+const AI={
+ chooseMove(hand,rel){
+  if(rel.t==='free'){ const normal=hand.filter(c=>c.r!==14); return [normal.length?normal[0]:hand[0]]; }
+  const singleOK=hand.filter(c=>c.r!==14&&c.r!==2&&Rules.isValidSingle(c,rel));
+  if(singleOK.length) return [singleOK.sort((a,b)=>a.r-b.r)[0]];
+  const two=hand.find(c=>c.r===2); if(two) return [two];
+  const combo=Rules.findCombo(hand,rel);
+  if(combo){ combo.sort((a,b)=>b.r-a.r); return combo; } // strategic order: hardest value last
+  const ace=hand.find(c=>c.r===14); if(ace) return [ace];
+  return null;
+ }
+};
+
+/* =============== TURN MANAGER (single source of truth) =============== */
+const Game={
+ gen:0,          // generation token - invalidates stale async callbacks from a previous game
+ players:[],
+ pile:[],
+ currentPlayer:0,   // <-- single source of truth for whose turn it is
+ roundStarter:0,
+ phase:'idle',      // idle | coinflip | playing | dealing | roundend | gameover
+ busy:false,        // re-entrancy guard so a turn can't be processed twice
+ selected:[],
+
+ nextActivePlayer(fromIdx){
+  const n=this.players.length; let i=fromIdx;
+  for(let k=0;k<n;k++){ i=(i+1)%n; if(this.players[i].active) return i; } // clockwise = ascending index
+  return -1;
+ },
+ activeCount(){ return this.players.filter(p=>p.active).length; },
+
+ async playCards(pIdx,cards){
+  if(this.busy) return; this.busy=true;
+  const p=this.players[pIdx];
+  const relBefore=Rules.getRelevantCard(this.pile);
+  for(const c of cards){ const idx=p.hand.findIndex(h=>h.id===c.id); p.hand.splice(idx,1); this.pile.push(c); }
+  UIRender();
+  if(cards.length>1) toast(`${p.name} הניחו/ה שילוב: ${cards.map(c=>rankLabel(c.r)).join(' + ')}`);
+  else toast(`${p.name} הניח/ה ${rankLabel(cards[0].r)}${cards[0].s}`);
+  Sound.play();
+  const played=cards[cards.length-1];
+  if(played.r===14) toast('אס! הדרישה אופסה — מהלך פתוח');
+  else if(played.r===2 && relBefore.t!=='free') toast(`2 משקף — עדיין מתייחסים ל-${relBefore.v}`);
+  await sleep(250);
+  this.busy=false;
+  if(this.activeCount()===1){ await this.endRound(pIdx); }
+  else { this.currentPlayer=this.nextActivePlayer(pIdx); UIRender(); }
+  this.loop();
+ },
+ async exitPlayer(pIdx){
+  if(this.busy) return; this.busy=true;
+  this.players[pIdx].active=false;
+  toast(`${this.players[pIdx].name} יצא/ה מהסבב (אין מהלך חוקי)`);
+  UIRender();
+  await sleep(400);
+  this.busy=false;
+  if(this.activeCount()===1){ const w=this.players.findIndex(p=>p.active); await this.endRound(w); }
+  else { this.currentPlayer=this.nextActivePlayer(pIdx); UIRender(); }
+  this.loop();
+ },
+ async endRound(winnerIdx){
+  const myGen=this.gen;
+  this.phase='roundend';
+  const w=this.players[winnerIdx];
+  toast(`נשאר שחקן אחד! ${w.name} זוכה בערימה`);
+  Sound.roundEnd();
+  await showBanner(`${w.name} לוקח/ת את הערימה! 🏆`, 1100);
+  if(myGen!==this.gen) return;
+  await animatePileToCollected(winnerIdx);
+  if(myGen!==this.gen) return;
+  w.collected.push(...this.pile); this.pile=[];
+  UIRender();
+  // order: player who STARTED the round that just ended fills to 5 first, then clockwise
+  const order=[]; let i=this.roundStarter;
+  for(let k=0;k<this.players.length;k++){ order.push(i); i=(i+1)%this.players.length; }
+  this.phase='dealing';
+  for(const idx of order){
+   const p=this.players[idx];
+   while(p.hand.length<5 && Deck.remaining()>0){
+    if(myGen!==this.gen) return;
+    const card=Deck.draw();
+    await animateDraw(idx,card);
+    if(myGen!==this.gen) return;
+    p.hand.push(card); UIRender();
+   }
+  }
+  this.players.forEach(p=>p.active=true);
+  this.roundStarter=winnerIdx; this.currentPlayer=winnerIdx;
+  if(Deck.remaining()===0 && this.players.every(p=>p.hand.length===0)){
+   this.phase='gameover'; await this.finishGame(); return;
+  }
+  this.phase='playing';
+  toast(`${w.name} פותח/ת את הסבב הבא`);
+  await showBanner('מתחילים סבב חדש', 700);
+ },
+ async finishGame(){
+  const scores=Game.computeScores();
+  const top=scores[0];
+  SAVEDATA.stats.games++;
+  SAVEDATA.stats.collected+=this.players[0].collected.length;
+  const humanWon = top.idx===0;
+  if(humanWon){ SAVEDATA.stats.wins++; SAVEDATA.coins+=25; }
+  else SAVEDATA.coins+=8;
+  persist(); Sound.win();
+  await showBanner(`המשחק נגמר! מנצח/ת: ${top.name} עם ${top.count} קלפים 🎉 (+מטבעות)`, 2600);
+  document.getElementById('newGameBtn').click();
+ },
+ computeScores(){
+  return this.players.map((p,idx)=>({idx,name:p.name,count:p.collected.length})).sort((a,b)=>b.count-a.count);
+ },
+ loop(){
+  if(this.phase!=='playing') return;
+  const myGen=this.gen;
+  const p=this.players[this.currentPlayer];
+  const rel=Rules.getRelevantCard(this.pile);
+  if(!Rules.hasLegalMove(p.hand,rel)){
+   if(p.hand.length===0 && Deck.remaining()===0 && this.players.every(pl=>pl.hand.length===0)){
+    this.phase='gameover'; this.finishGame(); return;
+   }
+   this.exitPlayer(this.currentPlayer);
+   return;
+  }
+  if(p.isAI){
+   UIRender();
+   setTimeout(()=>{
+    if(myGen!==this.gen || this.phase!=='playing') return; // stale-timer guard
+    const mv=AI.chooseMove(p.hand,rel);
+    if(mv) this.playCards(this.currentPlayer,mv);
+   },650);
+  } else {
+   UIRender();
+  }
+ }
+};
+function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
+
+/* =============== NEW GAME / COIN FLIP =============== */
+async function startNewGame(numPlayers){
+ Game.gen++; // invalidate any pending async work from a previous game
+ const players=[{name:'אתה',hand:[],collected:[],active:true,isAI:false}];
+ for(let i=1;i<numPlayers;i++) players.push({name:'AI '+i,hand:[],collected:[],active:true,isAI:true});
+ Deck.init();
+ for(const p of players) for(let k=0;k<5;k++) p.hand.push(Deck.draw());
+ const starter=(Math.random()*numPlayers)|0;
+ Game.players=players; Game.pile=[]; Game.currentPlayer=starter; Game.roundStarter=starter;
+ Game.selected=[]; Game.phase='coinflip'; Game.busy=false;
+ document.getElementById('setup').style.display='none';
+ document.getElementById('game').style.display='flex';
+ document.getElementById('game').classList.remove('hidden');
+ await coinFlipSequence(players, starter);
+ Game.phase='playing';
+ UIRender();
+ Game.loop();
+}
+function coinFlipSequence(players,starterIdx){
+ return new Promise(resolve=>{
+  const ov=document.createElement('div'); ov.id='coinflip';
+  ov.innerHTML=`<div class="bannerbox">הטלת מטבע - מי מתחיל?</div>
+   <div id="chipRow" style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center;max-width:80vw"></div>
+   <div class="coin spin" id="coinEl">🪙</div>
+   <div class="bannerbox hidden" id="coinResult"></div>`;
+  document.body.appendChild(ov);
+  const row=ov.querySelector('#chipRow');
+  players.forEach(p=>{ const c=document.createElement('div'); c.className='playerchip'; c.textContent=p.name; row.appendChild(c); });
+  setTimeout(()=>{
+   const res=ov.querySelector('#coinResult');
+   res.textContent=`${players[starterIdx].name} מתחיל/ה את המשחק!`;
+   res.classList.remove('hidden');
+   Sound.coin();
+   toast(`${players[starterIdx].name} מתחיל/ה`);
+   setTimeout(()=>{ ov.remove(); resolve(); },1300);
+  },1650);
+ });
+}
+function showBanner(text,ms){
+ return new Promise(resolve=>{
+  const ov=document.createElement('div'); ov.id='banner';
+  ov.innerHTML=`<div class="bannerbox">${text}</div>`;
+  document.body.appendChild(ov);
+  setTimeout(()=>{ ov.remove(); resolve(); }, ms);
+ });
+}
+
+/* =============== ANIMATIONS (visual only - never mutate rules) =============== */
+function rectCenter(el){ const r=el.getBoundingClientRect(); return {x:r.left+r.width/2,y:r.top+r.height/2}; }
+function flyElement(fromEl,toEl,label,cls){
+ return new Promise(resolve=>{
+  if(document.body.classList.contains('reduced-motion')){ resolve(); return; }
+  const f=document.createElement('div'); f.className='flyer '+(cls||'cardback');
+  if(label) f.textContent=label;
+  const a=rectCenter(fromEl);
+  document.body.appendChild(f);
+  const w=f.offsetWidth||66, h=f.offsetHeight||94;
+  f.style.left=(a.x-w/2)+'px'; f.style.top=(a.y-h/2)+'px';
+  requestAnimationFrame(()=>{
+   const b=rectCenter(toEl);
+   f.style.transform=`translate(${b.x-a.x}px, ${b.y-a.y}px) scale(.6)`;
+   f.style.opacity='0.3';
+  });
+  setTimeout(()=>{ f.remove(); resolve(); }, 560);
+ });
+}
+async function animateDraw(playerIdx,card){
+ Sound.draw();
+ const deckEl=document.getElementById('deckVisual');
+ const target=document.querySelector(`.pcard[data-idx="${playerIdx}"]`)||document.getElementById('top');
+ await flyElement(deckEl,target,'','cardback');
+}
+async function animatePileToCollected(winnerIdx){
+ const pileEl=document.getElementById('pileStack');
+ const target=document.querySelector(`.pcard[data-idx="${winnerIdx}"]`)||document.getElementById('top');
+ await flyElement(pileEl,target,'','cardback');
+}
+
+/* =============== RENDER / UI =============== */
+function cardEl(c,selected,extraClass){
+ const el=document.createElement('div');
+ el.className='card'+(('♥♦'.includes(c.s))?' red':'')+(selected?' selected':'')+(extraClass?(' '+extraClass):'');
+ el.innerHTML=`<div>${rankLabel(c.r)}</div><div style="text-align:center;font-size:1.3em">${c.s}</div><div style="text-align:left;transform:rotate(180deg)">${rankLabel(c.r)}</div>`;
+ return el;
+}
+function UIRender(){
+ const G=Game;
+ const top=document.getElementById('top'); top.innerHTML='';
+ G.players.forEach((p,i)=>{
+  const d=document.createElement('div');
+  d.className='pcard'+(i===G.currentPlayer && G.phase==='playing'?' turn':'')+(!p.active?' out':'');
+  d.dataset.idx=i;
+  d.innerHTML=`${i===G.currentPlayer&&G.phase==='playing'?'<div class="turnarrow">▼</div>':''}
+   <div class="pname">${p.name}</div>
+   <div class="small">ביד: ${p.hand.length} | נצבר: ${p.collected.length}${!p.active?' | יצא':''}</div>`;
+  top.appendChild(d);
+ });
+ const rel=Rules.getRelevantCard(G.pile);
+ document.getElementById('relText').textContent = G.phase==='gameover' ? 'המשחק הסתיים' :
+  rel.t==='free' ? 'פתוח - אפשר להניח כל קלף' : `יש להניח קלף/שילוב שגדול-שווה ומתחלק ב-${rel.v}`;
+ document.getElementById('deckCount').textContent = 'בחפיסה: '+Deck.remaining();
+ const ps=document.getElementById('pileStack'); ps.innerHTML='';
+ const top3=G.pile.slice(-3);
+ top3.forEach((c,idx)=>{
+  const el=cardEl(c,false, idx===top3.length-1 && c.r===14 ? 'ace-flash' : (idx===top3.length-1 && c.r===2 ? 'two-mirror' : ''));
+  el.classList.add('pile');
+  el.style.position='absolute'; el.style.left=(idx*5)+'px'; el.style.top=(idx*-5)+'px';
+  ps.appendChild(el);
+ });
+ if(!G.pile.length){ const empt=document.createElement('div'); empt.className='card pile'; empt.style.opacity=.15; ps.appendChild(empt); }
+
+ const hand=document.getElementById('hand'); hand.innerHTML='';
+ const human=G.players[0];
+ const humanTurn = G.phase==='playing' && G.currentPlayer===0 && human.active;
+ human.hand.forEach(c=>{
+  const sel = G.selected.find(x=>x.id===c.id);
+  const playable = humanTurn && Rules.isValidSingle(c,rel);
+  const el=cardEl(c, !!sel, playable && !sel ? 'playable':'');
+  if(sel){ const b=document.createElement('div'); b.className='badge'; b.textContent=G.selected.indexOf(sel)+1; el.appendChild(b); }
+  if(humanTurn) el.onclick=()=>{
+   const idx=G.selected.findIndex(x=>x.id===c.id);
+   if(idx>=0) G.selected.splice(idx,1); else G.selected.push(c);
+   UIRender();
+  };
+  hand.appendChild(el);
+ });
+ const playBtn=document.getElementById('playBtn');
+ playBtn.classList.toggle('hidden', !humanTurn);
+ playBtn.disabled = !(humanTurn && Rules.isValidPlay(G.selected, rel));
+ const noMoveBtn=document.getElementById('noMoveBtn');
+ noMoveBtn.classList.toggle('hidden', !(humanTurn && !Rules.hasLegalMove(human.hand, rel)));
+}
+
+/* =============== EVENTS =============== */
+document.getElementById('playBtn').onclick=()=>{
+ const rel=Rules.getRelevantCard(Game.pile);
+ if(Game.phase==='playing' && Game.currentPlayer===0 && Rules.isValidPlay(Game.selected,rel)){
+  const cards=Game.selected.slice(); Game.selected=[];
+  Game.playCards(0,cards);
+ } else { Sound.error(); }
+};
+document.getElementById('noMoveBtn').onclick=()=>{
+ if(Game.phase==='playing' && Game.currentPlayer===0){ Game.selected=[]; Game.exitPlayer(0); }
+};
+document.getElementById('newGameBtn').onclick=()=>{
+ Game.gen++; Game.phase='idle';
+ document.getElementById('game').style.display='none';
+ document.getElementById('setup').style.display='flex';
+ renderShop(); renderProfile();
+};
+
+let chosen=3;
+const pc=document.getElementById('pcount');
+[2,3,4].forEach(n=>{
+ const b=document.createElement('button'); b.textContent=n+' שחקנים'; if(n===chosen)b.classList.add('sel');
+ b.onclick=()=>{ chosen=n; [...pc.children].forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); };
+ pc.appendChild(b);
+});
+document.getElementById('startBtn').onclick=()=>startNewGame(chosen);
+
+/* tabs */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+ btn.onclick=()=>{
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['play','shop','settings','profile'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden', t!==btn.dataset.tab));
+ };
+});
+
+/* settings wiring */
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ Settings.data.mode=b.dataset.mode; Settings.apply(); });
+document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ Settings.data.quality=b.dataset.q; persist(); });
+document.getElementById('soundOn').onchange=e=>{ Settings.data.sound=e.target.checked; persist(); };
+document.getElementById('musicOn').onchange=e=>{ Settings.data.music=e.target.checked; persist(); };
+document.getElementById('volFx').oninput=e=>{ Settings.data.volFx=parseFloat(e.target.value); persist(); };
+document.getElementById('largeText').onchange=e=>{ Settings.data.largeText=e.target.checked; Settings.apply(); };
+document.getElementById('highContrast').onchange=e=>{ Settings.data.highContrast=e.target.checked; Settings.apply(); };
+document.getElementById('reducedMotion').onchange=e=>{ Settings.data.reducedMotion=e.target.checked; Settings.apply(); };
+document.getElementById('resetSettings').onclick=()=>{
+ SAVEDATA.settings=defaultSave().settings; Settings.data=SAVEDATA.settings; Settings.apply(); toast('ההגדרות אופסו');
+};
+
+/* =============== GOOGLE AUTH / ADMIN =============== */
+function setAuthStatus(t){const e=document.getElementById('authStatus');if(e)e.textContent=t;}
+async function onGoogleCredential(response){
+ try{
+  authToken=response.credential;
+  const r=await fetch('/api/auth/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken}});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'auth failed');
+  authUser=d.user;setAuthStatus('מחובר/ת כ-'+(d.user.name||d.user.email||'משתמש'));
+  document.getElementById('profileTitle').textContent=(d.user.name||d.user.email||'משתמש')+' 👤';
+  applyServerUser(d.user);
+  if(d.isAdmin)showAdminPanel();
+  toast('התחברת בהצלחה');
+ }catch(e){authToken=null;setAuthStatus('ההתחברות נכשלה: '+e.message);console.error(e);}
+}
+async function initGoogleAuth(){
+ try{
+  const cfg=await fetch('/api/config').then(r=>r.json());
+  if(!cfg.googleClientId){setAuthStatus('Google Login עדיין לא מוגדר בשרת.');return;}
+  if(!window.google?.accounts?.id){setTimeout(initGoogleAuth,400);return;}
+  google.accounts.id.initialize({client_id:cfg.googleClientId,callback:onGoogleCredential,auto_select:false,cancel_on_tap_outside:true});
+  google.accounts.id.renderButton(document.getElementById('googleSignInBtn'),{theme:'outline',size:'large',text:'signin_with',shape:'rectangular',locale:'he'});
+ }catch(e){setAuthStatus('Google Login עדיין לא מוגדר בשרת.');}
+}
+function showAdminPanel(){document.getElementById('adminPanel')?.classList.remove('hidden');loadAdminUsers();}
+async function loadAdminUsers(){
+ try{
+  const r=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+authToken}}),d=await r.json();
+  if(!r.ok)throw new Error(d.error||'failed');
+  document.getElementById('adminStatus').textContent=d.users.length+' משתמשים רשומים';
+  const box=document.getElementById('adminUsers');box.innerHTML='';
+  d.users.forEach(u=>{
+   const row=document.createElement('div');row.className='adminuser';
+   row.innerHTML='<span><b>'+String(u.name||'ללא שם').replace(/[<>&"]/g,'')+'</b><br><span class="small">'+String(u.email||'').replace(/[<>&"]/g,'')+' · 🪙 '+u.coins+'</span></span>';
+   const b=document.createElement('button');b.textContent='אפס מטבעות';b.onclick=()=>resetUserCoins(u.google_sub,u.name||u.email||'המשתמש');row.appendChild(b);box.appendChild(row);
+  });
+ }catch(e){document.getElementById('adminStatus').textContent='לא ניתן לטעון משתמשים: '+e.message;}
+}
+async function resetUserCoins(googleSub,name){
+ if(!confirm('לאפס ל-0 את המטבעות של '+name+'?'))return;
+ try{
+  const r=await fetch('/api/admin/reset-user-coins',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify({googleSub})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'reset failed');toast('המטבעות אופסו');loadAdminUsers();
+ }catch(e){toast('איפוס נכשל: '+e.message);}
+}
+initGoogleAuth();
+
+/* init */
+Shop.equipTheme(SAVEDATA.equipped);
+Settings.apply();
+renderShop();
+renderProfile();
+</script>
+</body>
+</html>
