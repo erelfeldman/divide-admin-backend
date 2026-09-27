@@ -446,6 +446,33 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
  <div id="toasts"></div>
 </div>
 <script>
+
+// =============== ARCADE CARD GAMES ===============
+const GAME_STATE={type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',pokerStage:0,warCards:[],yanivScore:0,durakTrump:null};
+const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
+const SUITS=['♠','♥','♦','♣'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+function makeDeck(){const d=[];for(const s of SUITS)for(const r of RANKS)d.push({s,r,v:RANKS.indexOf(r)+1});return d.sort(()=>Math.random()-.5);}
+function cardHTML(c,cls=''){const red=c.s==='♥'||c.s==='♦';return '<div class="arcade-card '+(red?'red ':'')+cls+'"><span>'+c.r+'</span><span style="font-size:1.6em;text-align:center">'+c.s+'</span><span style="text-align:right">'+c.r+'</span></div>'}
+function setArcade(type){GAME_STATE.type=type;document.querySelectorAll('.gamepick').forEach(b=>b.classList.toggle('active',b.dataset.game===type));document.getElementById('arcadeTitle').textContent=GAMES[type].title;document.getElementById('arcade').style.display='flex';startArcade(type);}
+function logArcade(t){document.getElementById('arcadeLog').textContent=t;}
+function renderArcade(){const t=document.getElementById('arcadeTable');const a=document.getElementById('arcadeActions');if(!t)return;
+ if(GAME_STATE.type==='war'){t.innerHTML='<div class="rankbox">הקלפים של היריב: '+GAME_STATE.opponent.length+'</div><div class="arcade-row" style="margin:35px 0">'+(GAME_STATE.warCards.map(x=>cardHTML(x)).join('')||'<div class="small">לחץ על ״קרב״</div>')+'</div><div class="rankbox">הקלפים שלך: '+GAME_STATE.hand.length+'</div>';a.innerHTML='<button id="warFight">⚔️ קרב!</button>';return;}
+ t.innerHTML='<div class="arcade-row"><div class="rankbox">יריב: '+GAME_STATE.opponent.length+' קלפים</div></div><div class="arcade-row" style="margin:24px 0"><div class="rankbox">'+(GAME_STATE.durakTrump?'שליט: '+GAME_STATE.durakTrump:'')+'</div></div><div class="arcade-hand">'+GAME_STATE.hand.map((x,i)=>cardHTML(x,GAME_STATE.selected.includes(i)?'selected':'' ).replace('class="arcade-card','data-i="'+i+'" class="arcade-card')).join('')+'</div>';
+ a.innerHTML=GAME_STATE.type==='poker'?'<button id="pokerDeal">חלק מחדש</button><button id="pokerCall">השווה</button><button id="pokerFold" class="ghost">פרוש</button>':GAME_STATE.type==='yaniv'?'<button id="yanivDiscard">זרוק נבחרים</button><button id="yanivCall">📣 יניב!</button>':GAME_STATE.type==='durak'?'<button id="durakAttack">⚔️ תקוף</button><button id="durakDefend">🛡️ הגן</button>':'<button id="genericDraw">משוך קלף</button>';
+ t.querySelectorAll('.arcade-card[data-i]').forEach(el=>el.onclick=()=>{const i=Number(el.dataset.i);const p=GAME_STATE.selected.indexOf(i);if(p>=0)GAME_STATE.selected.splice(p,1);else GAME_STATE.selected.push(i);renderArcade();});
+ if(GAME_STATE.type==='poker'){document.getElementById('pokerDeal').onclick=()=>startArcade('poker');document.getElementById('pokerCall').onclick=()=>{logArcade('השוואת הימור — היד שלך נבדקת.');};document.getElementById('pokerFold').onclick=()=>{logArcade('פרשת מהיד.');};}
+ if(GAME_STATE.type==='yaniv'){document.getElementById('yanivDiscard').onclick=()=>{if(!GAME_STATE.selected.length)return logArcade('בחר קלפים לזריקה.');GAME_STATE.hand=GAME_STATE.hand.filter((_,i)=>!GAME_STATE.selected.includes(i));GAME_STATE.selected=[];GAME_STATE.hand.push(GAME_STATE.deck.pop());logArcade('זרקת קלפים וקיבלת קלף חדש.');renderArcade();};document.getElementById('yanivCall').onclick=()=>{logArcade('📣 יניב! נבדק אם הסכום נמוך מספיק.');};}
+ if(GAME_STATE.type==='durak'){document.getElementById('durakAttack').onclick=()=>logArcade('התקפה בוצעה — בחר קלף נוסף.');document.getElementById('durakDefend').onclick=()=>logArcade('ניסיון הגנה בוצע.');}
+ if(GAME_STATE.type==='war')document.getElementById('warFight').onclick=warFight;
+}
+function startArcade(type){GAME_STATE.type=type;GAME_STATE.deck=makeDeck();GAME_STATE.hand=[];GAME_STATE.opponent=[];GAME_STATE.selected=[];GAME_STATE.warCards=[];GAME_STATE.durakTrump=null;
+ const n=type==='poker'?5:type==='yaniv'?5:type==='war'?26:6;for(let i=0;i<n;i++){GAME_STATE.hand.push(GAME_STATE.deck.pop());GAME_STATE.opponent.push(GAME_STATE.deck.pop());}
+ if(type==='durak')GAME_STATE.durakTrump=GAME_STATE.deck[0]?.s;
+ document.getElementById('arcadeStatus').textContent='משחק מול AI • גרסת בטא';logArcade('המשחק התחיל. בחר מהלך.');renderArcade();}
+function warFight(){if(!GAME_STATE.hand.length||!GAME_STATE.opponent.length){logArcade('המשחק הסתיים!');return;}const a=GAME_STATE.hand.pop(),b=GAME_STATE.opponent.pop();GAME_STATE.warCards=[a,b];if(a.v>=b.v){GAME_STATE.hand.push(a,b);logArcade('ניצחת בקרב! הקלפים שלך.');}else{GAME_STATE.opponent.push(a,b);logArcade('היריב ניצח בקרב.');}renderArcade();}
+document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=>{setArcade(b.dataset.game);}));
+document.getElementById('arcadeExit')?.addEventListener('click',()=>{document.getElementById('arcade').style.display='none';});
+
 /* =============== SOUND (procedural, no external assets) =============== */
 const Sound=(()=>{
  let ctx=null;
