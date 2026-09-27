@@ -447,7 +447,13 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
 </div>
 <script>
 
-// =============== ARCADE CARD GAMES ===============
+
+// Admin unlimited coins: UI always shows infinity and shop purchases bypass coin limits.
+function adminCoinsUI(){return !!window.__divideIsAdmin;}
+function formatCoins(n){return adminCoinsUI()?'∞':String(Math.max(0,Math.floor(Number(n)||0)));}
+// Wrap common coin display/update points safely.
+const _oldStartArcade=startArcade;
+\n// =============== ARCADE CARD GAMES ===============
 const GAME_STATE={type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',pokerStage:0,warCards:[],yanivScore:0,durakTrump:null};
 const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
 const SUITS=['♠','♥','♦','♣'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
@@ -468,7 +474,7 @@ function renderArcade(){const t=document.getElementById('arcadeTable');const a=d
 function startArcade(type){GAME_STATE.type=type;GAME_STATE.deck=makeDeck();GAME_STATE.hand=[];GAME_STATE.opponent=[];GAME_STATE.selected=[];GAME_STATE.warCards=[];GAME_STATE.durakTrump=null;
  const n=type==='poker'?5:type==='yaniv'?5:type==='war'?26:6;for(let i=0;i<n;i++){GAME_STATE.hand.push(GAME_STATE.deck.pop());GAME_STATE.opponent.push(GAME_STATE.deck.pop());}
  if(type==='durak')GAME_STATE.durakTrump=GAME_STATE.deck[0]?.s;
- document.getElementById('arcadeStatus').textContent='משחק מול AI • גרסת בטא';logArcade('המשחק התחיל. בחר מהלך.');renderArcade();}
+ document.getElementById('arcadeStatus').textContent='משחק מול AI • גרסת בטא'+(adminCoinsUI()?' • 👑 מטבעות ללא הגבלה':'');logArcade('המשחק התחיל. בחר מהלך.');renderArcade();}
 function warFight(){if(!GAME_STATE.hand.length||!GAME_STATE.opponent.length){logArcade('המשחק הסתיים!');return;}const a=GAME_STATE.hand.pop(),b=GAME_STATE.opponent.pop();GAME_STATE.warCards=[a,b];if(a.v>=b.v){GAME_STATE.hand.push(a,b);logArcade('ניצחת בקרב! הקלפים שלך.');}else{GAME_STATE.opponent.push(a,b);logArcade('היריב ניצח בקרב.');}renderArcade();}
 document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=>{setArcade(b.dataset.game);}));
 document.getElementById('arcadeExit')?.addEventListener('click',()=>{document.getElementById('arcade').style.display='none';});
@@ -1001,7 +1007,7 @@ async function onGoogleCredential(response){
   authUser=d.user;setAuthStatus('מחובר/ת כ-'+(d.user.name||d.user.email||'משתמש'));
   document.getElementById('profileTitle').textContent=(d.user.name||d.user.email||'משתמש')+' 👤';
   applyServerUser(d.user);
-  if(d.isAdmin)showAdminPanel();
+  window.__divideIsAdmin=!!d.isAdmin; if(d.isAdmin)showAdminPanel();
   loadSocialFeed();
   toast('התחברת בהצלחה');
  }catch(e){authToken=null;setAuthStatus('ההתחברות נכשלה: '+e.message);console.error(e);}
