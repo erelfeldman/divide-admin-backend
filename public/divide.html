@@ -1045,10 +1045,10 @@ async function onGoogleCredential(response){
   authToken=response.credential;
   const r=await fetch('/api/auth/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken}});
   const d=await r.json();if(!r.ok)throw new Error(d.error||'auth failed');
-  authUser=d.user;setAuthStatus('מחובר/ת כ-'+(d.user.name||d.user.email||'משתמש'));
+  authUser=d.user;window.__divideIsAdmin=!!d.isAdmin;setAuthStatus('מחובר/ת כ-'+(d.user.name||d.user.email||'משתמש'));
   document.getElementById('profileTitle').textContent=(d.user.name||d.user.email||'משתמש')+' 👤';
   applyServerUser(d.user);
-  window.__divideIsAdmin=!!d.isAdmin; if(d.isAdmin)showAdminPanel(); applyLanguage(currentLang);
+  if(d.isAdmin)showAdminPanel(); applyLanguage(currentLang);
   loadSocialFeed();
   toast('התחברת בהצלחה');
  }catch(e){authToken=null;setAuthStatus('ההתחברות נכשלה: '+e.message);console.error(e);}
