@@ -133,6 +133,6 @@ app.get('*', (req,res) => {
 const port = process.env.PORT || 3000;
 async function initDb(){
   if(!pool) return;
-  await pool.query('CREATE TABLE IF NOT EXISTS users (google_sub TEXT PRIMARY KEY,email TEXT NOT NULL,name TEXT,picture TEXT,coins INTEGER NOT NULL DEFAULT 20,wins INTEGER NOT NULL DEFAULT 0,games INTEGER NOT NULL DEFAULT 0,collected INTEGER NOT NULL DEFAULT 0,owned_themes JSONB NOT NULL DEFAULT '[\"classic\"]'::jsonb,equipped_theme TEXT NOT NULL DEFAULT 'classic',revision BIGINT NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())');
+    await pool.query("CREATE TABLE IF NOT EXISTS users (google_sub TEXT PRIMARY KEY,email TEXT NOT NULL,name TEXT,picture TEXT,coins INTEGER NOT NULL DEFAULT 20,wins INTEGER NOT NULL DEFAULT 0,games INTEGER NOT NULL DEFAULT 0,collected INTEGER NOT NULL DEFAULT 0,owned_themes JSONB NOT NULL DEFAULT '[\"classic\"]'::jsonb,equipped_theme TEXT NOT NULL DEFAULT 'classic',revision BIGINT NOT NULL DEFAULT 0,updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW())");
 }
 initDb().then(()=>app.listen(port,()=>console.log('Divide server running on :'+port))).catch(e=>{console.error(e);process.exit(1);});
