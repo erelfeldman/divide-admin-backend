@@ -13,7 +13,8 @@ const { OAuth2Client } = require('google-auth-library');
 const { Pool } = require('pg');
 
 const GOOGLE_CLIENT_ID = process.env.GOOGLE_CLIENT_ID;   // from Google Cloud Console
-const ADMIN_UID = process.env.ADMIN_UID;                 // YOUR Google account's UID only. Never in frontend code.
+const ADMIN_UID = process.env.ADMIN_UID || '';                 // Legacy single-admin UID (optional). Never in frontend code.
+const ADMIN_EMAILS = (process.env.ADMIN_EMAILS || '').split(',').map(x => x.trim().toLowerCase()).filter(Boolean);
 const DATABASE_URL = process.env.DATABASE_URL;
 const pool = DATABASE_URL ? new Pool({
   connectionString: DATABASE_URL,
@@ -52,8 +53,12 @@ async function requireAuth(req, res, next) {
 }
 
 /** Only passes if the verified UID matches the one single admin UID. */
+function isAdminUser(user){
+  const email = String(user?.email || '').toLowerCase();
+  return !!user && ((ADMIN_UID && user.sub === ADMIN_UID) || ADMIN_EMAILS.includes(email));
+}
 function requireAdmin(req, res, next) {
-  if (req.user && req.user.sub === ADMIN_UID) return next();
+  if (isAdminUser(req.user)) return next();
   return res.status(403).json({ error: 'not admin' });
 }
 
@@ -80,7 +85,7 @@ async function upsertUser(p){
  return r.rows[0];
 }
 app.post('/api/auth/sync', requireAuth, async (req,res)=>{
- try{ const u=await upsertUser(req.user); res.json({user:publicUser(u),isAdmin:!!ADMIN_UID&&req.user.sub===ADMIN_UID}); }
+ try{ const u=await upsertUser(req.user); res.json({user:publicUser(u),isAdmin:isAdminUser(req.user)}); }
  catch(e){console.error(e);res.status(500).json({error:'database error'});}
 });
 app.get('/api/me', requireAuth, async (req,res)=>{
@@ -104,7 +109,7 @@ app.get('/api/admin/users', requireAuth, requireAdmin, async (req,res)=>{
  catch(e){console.error(e);res.status(500).json({error:'database error'});}
 });
 app.get('/api/is-admin', requireAuth, (req, res) => {
-  res.json({ isAdmin: req.user.sub === ADMIN_UID });
+  res.json({ isAdmin: isAdminUser(req.user) });
 });
 
 // Example protected admin action. Every admin route MUST use both
@@ -123,7 +128,7 @@ app.post('/api/admin/reset-user-coins', requireAuth, requireAdmin, async (req, r
 
 // There is intentionally NO endpoint anywhere that can change ADMIN_UID,
 // promote another account, or accept a client-supplied "isAdmin"/"role"
-// value. Admin status is a fixed constant on the server, not stored data
+// value. Admin status is a fixed server-side allowlist, not stored data
 // that any request (including from the admin) can edit.
 
 app.get('*', (req,res) => {
