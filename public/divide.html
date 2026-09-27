@@ -349,7 +349,7 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
 .feed{display:grid;gap:10px;margin-top:12px}.post{padding:12px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
 .post-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#55d6ff,#6f7cff);display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#06101b}
 .reaction-row{display:flex;gap:8px;margin-top:8px}.reaction{background:rgba(255,255,255,.06);color:#eaf5ff;border:1px solid rgba(255,255,255,.08);box-shadow:none;padding:6px 10px}
-</style></head>
+</style><link rel="manifest" href="/manifest.webmanifest"><meta name="theme-color" content="#07111f"><meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes"></head>
 <body>
 <div id="app">
 
@@ -1050,5 +1050,5 @@ Settings.apply();
 renderShop();
 renderProfile();
 </script>
-</body>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script></body>
 </html>
