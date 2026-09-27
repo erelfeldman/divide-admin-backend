@@ -562,7 +562,7 @@ function persist(){
 }
 function applyServerUser(user){
  syncingServerData=true;
- SAVEDATA.coins=Number(user.coins)||0;
+ SAVEDATA.coins=window.__divideIsAdmin?2147483647:(Number(user.coins)||0);
  SAVEDATA.stats={wins:Number(user.wins)||0,games:Number(user.games)||0,collected:Number(user.collected)||0};
  SAVEDATA.ownedThemes=Array.isArray(user.ownedThemes)?user.ownedThemes:['classic'];
  SAVEDATA.equipped=user.equipped||'classic';
@@ -623,13 +623,13 @@ const Shop={
  buy(id){
   const t=THEMES.find(x=>x.id===id); if(!t) return;
   if(SAVEDATA.ownedThemes.includes(id)) return;
-  if(SAVEDATA.coins<t.price){ toast('אין מספיק מטבעות'); Sound.error(); return; }
-  SAVEDATA.coins-=t.price; SAVEDATA.ownedThemes.push(id); persist(); Sound.buy();
+  if(!adminCoinsUI() && SAVEDATA.coins<t.price){ toast('אין מספיק מטבעות'); Sound.error(); return; }
+  if(!adminCoinsUI()) SAVEDATA.coins-=t.price; SAVEDATA.ownedThemes.push(id); persist(); Sound.buy();
   toast(`נרכש עיצוב ${t.name}!`); renderShop(); renderProfile();
  }
 };
 function renderShop(){
- document.getElementById('coinsShop').textContent=SAVEDATA.coins;
+ document.getElementById('coinsShop').textContent=formatCoins(SAVEDATA.coins);
  const g=document.getElementById('themeGrid'); g.innerHTML='';
  THEMES.forEach(t=>{
   const owned=SAVEDATA.ownedThemes.includes(t.id);
@@ -648,7 +648,7 @@ function renderProfile(){
  document.getElementById('pWins').textContent=SAVEDATA.stats.wins;
  document.getElementById('pGames').textContent=SAVEDATA.stats.games;
  document.getElementById('pCollected').textContent=SAVEDATA.stats.collected;
- document.getElementById('pCoins').textContent=SAVEDATA.coins;
+ document.getElementById('pCoins').textContent=formatCoins(SAVEDATA.coins);
  document.getElementById('pTheme').textContent=THEMES.find(t=>t.id===SAVEDATA.equipped).name;
 }
 function toast(msg){
