@@ -20,8 +20,8 @@ const pool = DATABASE_URL ? new Pool({
   ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
 }) : null;
 
-if (!GOOGLE_CLIENT_ID || !ADMIN_UID) {
-  throw new Error('Set GOOGLE_CLIENT_ID and ADMIN_UID as server environment variables (never hardcode in a file you commit or ship to the browser).');
+if (!GOOGLE_CLIENT_ID || !ADMIN_UID || !DATABASE_URL) {
+  throw new Error('Set GOOGLE_CLIENT_ID, ADMIN_UID and DATABASE_URL as server environment variables (never hardcode secrets in a file you commit or ship to the browser).');
 }
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
