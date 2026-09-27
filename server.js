@@ -72,6 +72,37 @@ app.get('/api/config', (req, res) => {
   res.json({ googleClientId: GOOGLE_CLIENT_ID || null });
 });
 
+function publicUser(u){
+ return {google_sub:u.google_sub,email:u.email,name:u.name,picture:u.picture,coins:u.coins,wins:u.wins,games:u.games,collected:u.collected,ownedThemes:u.owned_themes,equipped:u.equipped_theme,revision:Number(u.revision)};
+}
+async function upsertUser(p){
+ const r=await pool.query('INSERT INTO users (google_sub,email,name,picture) VALUES ($1,$2,$3,$4) ON CONFLICT (google_sub) DO UPDATE SET email=EXCLUDED.email,name=EXCLUDED.name,picture=EXCLUDED.picture,updated_at=NOW() RETURNING *',[p.sub,p.email||'',p.name||null,p.picture||null]);
+ return r.rows[0];
+}
+app.post('/api/auth/sync', requireAuth, async (req,res)=>{
+ try{ const u=await upsertUser(req.user); res.json({user:publicUser(u),isAdmin:!!ADMIN_UID&&req.user.sub===ADMIN_UID}); }
+ catch(e){console.error(e);res.status(500).json({error:'database error'});}
+});
+app.get('/api/me', requireAuth, async (req,res)=>{
+ try{ const u=await upsertUser(req.user); res.json({user:publicUser(u),isAdmin:!!ADMIN_UID&&req.user.sub===ADMIN_UID}); }
+ catch(e){console.error(e);res.status(500).json({error:'database error'});}
+});
+app.post('/api/save', requireAuth, async (req,res)=>{
+ try{
+  const d=req.body||{};
+  const nums=['coins','wins','games','collected'];
+  const v=nums.map(k=>Math.max(0,Math.floor(Number(d[k]??0))));
+  const themes=Array.isArray(d.ownedThemes)?d.ownedThemes.slice(0,50):['classic'];
+  const equipped=typeof d.equippedTheme==='string'?d.equippedTheme.slice(0,50):'classic';
+  const r=await pool.query('UPDATE users SET coins=$2,wins=$3,games=$4,collected=$5,owned_themes=$6,equipped_theme=$7,revision=revision+1,updated_at=NOW() WHERE google_sub=$1 RETURNING *',[req.user.sub,...v,JSON.stringify(themes),equipped]);
+  if(!r.rowCount){const n=await upsertUser(req.user);return res.json({user:publicUser(n)});}
+  res.json({user:publicUser(r.rows[0])});
+ }catch(e){console.error(e);res.status(400).json({error:'invalid save data'});}
+});
+app.get('/api/admin/users', requireAuth, requireAdmin, async (req,res)=>{
+ try{const r=await pool.query('SELECT google_sub,email,name,coins,wins,games,collected,updated_at,revision FROM users ORDER BY updated_at DESC LIMIT 200');res.json({users:r.rows});}
+ catch(e){console.error(e);res.status(500).json({error:'database error'});}
+});
 app.get('/api/is-admin', requireAuth, (req, res) => {
   res.json({ isAdmin: req.user.sub === ADMIN_UID });
 });
