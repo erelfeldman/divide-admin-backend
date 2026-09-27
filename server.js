@@ -77,19 +77,19 @@ app.get('/api/config', (req, res) => {
   res.json({ googleClientId: GOOGLE_CLIENT_ID || null });
 });
 
-function publicUser(u){
- return {google_sub:u.google_sub,email:u.email,name:u.name,picture:u.picture,coins:u.coins,wins:u.wins,games:u.games,collected:u.collected,ownedThemes:u.owned_themes,equipped:u.equipped_theme,revision:Number(u.revision)};
+function publicUser(u, admin=false){
+ return {google_sub:u.google_sub,email:u.email,name:u.name,picture:u.picture,coins:admin?null:u.coins,wins:u.wins,games:u.games,collected:u.collected,ownedThemes:u.owned_themes,equipped:u.equipped_theme,revision:Number(u.revision)};
 }
 async function upsertUser(p){
  const r=await pool.query('INSERT INTO users (google_sub,email,name,picture,coins) VALUES ($1,$2,$3,$4,$5) ON CONFLICT (google_sub) DO UPDATE SET email=EXCLUDED.email,name=EXCLUDED.name,picture=EXCLUDED.picture,updated_at=NOW() RETURNING *',[p.sub,p.email||'',p.name||null,p.picture||null,isAdminUser(p)?2147483647:20]);
  return r.rows[0];
 }
 app.post('/api/auth/sync', requireAuth, async (req,res)=>{
- try{ const u=await upsertUser(req.user); res.json({user:publicUser(u),isAdmin:isAdminUser(req.user)}); }
+ try{ const u=await upsertUser(req.user); res.json({user:publicUser(u,isAdminUser(req.user)),isAdmin:isAdminUser(req.user)}); }
  catch(e){console.error(e);res.status(500).json({error:'database error'});}
 });
 app.get('/api/me', requireAuth, async (req,res)=>{
- try{ const u=await upsertUser(req.user); res.json({user:publicUser(u),isAdmin:isAdminUser(req.user)}); }
+ try{ const u=await upsertUser(req.user); res.json({user:publicUser(u,isAdminUser(req.user)),isAdmin:isAdminUser(req.user)}); }
  catch(e){console.error(e);res.status(500).json({error:'database error'});}
 });
 app.post('/api/save', requireAuth, async (req,res)=>{
@@ -101,8 +101,8 @@ app.post('/api/save', requireAuth, async (req,res)=>{
   const equipped=typeof d.equippedTheme==='string'?d.equippedTheme.slice(0,50):'classic';
   const isAdmin=isAdminUser(req.user); if(isAdmin)v[0]=2147483647;
   const r=await pool.query('UPDATE users SET coins=$2,wins=$3,games=$4,collected=$5,owned_themes=$6,equipped_theme=$7,revision=revision+1,updated_at=NOW() WHERE google_sub=$1 RETURNING *',[req.user.sub,...v,JSON.stringify(themes),equipped]);
-  if(!r.rowCount){const n=await upsertUser(req.user);return res.json({user:publicUser(n)});}
-  res.json({user:publicUser(r.rows[0])});
+  if(!r.rowCount){const n=await upsertUser(req.user);return res.json({user:publicUser(n,isAdmin)});}
+  res.json({user:publicUser(r.rows[0],isAdmin)});
  }catch(e){console.error(e);res.status(400).json({error:'invalid save data'});}
 });
 app.get('/api/admin/users', requireAuth, requireAdmin, async (req,res)=>{
@@ -212,6 +212,28 @@ app.post('/api/social/share-result', requireAuth, async (req,res)=>{
   const r=await pool.query('INSERT INTO social_posts (google_sub,body) VALUES ($1,$2) RETURNING id,body,created_at',[req.user.sub,'🎉 '+text]);
   res.json({post:r.rows[0]});
  }catch(e){res.status(500).json({error:'database error'});}
+});
+app.post('/api/admin/gift', requireAuth, requireAdmin, async (req,res)=>{
+ const googleSub=String(req.body?.googleSub||'').trim();
+ const coins=Math.max(0,Math.min(1000000,Math.floor(Number(req.body?.coins||0))));
+ const theme=String(req.body?.theme||'').trim();
+ const validThemes=new Set(['classic','dark','fire','ice','galaxy','neon']);
+ if(!googleSub)return res.status(400).json({error:'googleSub required'});
+ if(!coins && (!theme || !validThemes.has(theme)))return res.status(400).json({error:'choose a gift'});
+ const clientConn=await pool.connect();
+ try{
+  await clientConn.query('BEGIN');
+  const user=(await clientConn.query('SELECT * FROM users WHERE google_sub=$1 FOR UPDATE',[googleSub])).rows[0];
+  if(!user){await clientConn.query('ROLLBACK');return res.status(404).json({error:'user not found'});}
+  if(coins>0)await clientConn.query('UPDATE users SET coins=LEAST(coins+$2,2147483647),revision=revision+1,updated_at=NOW() WHERE google_sub=$1',[googleSub,coins]);
+  if(theme)await clientConn.query("UPDATE users SET owned_themes=CASE WHEN owned_themes ? $2 THEN owned_themes ELSE owned_themes || to_jsonb($2::text) END,revision=revision+1,updated_at=NOW() WHERE google_sub=$1",[googleSub,theme]);
+  const giftParts=[];if(coins)giftParts.push('🪙 '+coins+' מטבעות');if(theme)giftParts.push('🎨 '+theme);
+  await clientConn.query('INSERT INTO social_notifications (google_sub,type,text) VALUES ($1,$2,$3)',[googleSub,'gift','האדמין העניק לך '+giftParts.join(' ו-')+' 🎁']);
+  const updated=(await clientConn.query('SELECT * FROM users WHERE google_sub=$1',[googleSub])).rows[0];
+  await clientConn.query('COMMIT');
+  res.json({ok:true,user:publicUser(updated,isAdminUser(req.user)),gift:giftParts});
+ }catch(e){await clientConn.query('ROLLBACK');console.error(e);res.status(500).json({error:'gift failed'});}
+ finally{clientConn.release();}
 });
 app.get('/api/is-admin', requireAuth, (req, res) => {
   res.json({ isAdmin: isAdminUser(req.user) });
