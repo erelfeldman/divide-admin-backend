@@ -398,7 +398,7 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
    <div class="authbox"><div id="googleSignInBtn"></div><div class="authstatus" id="authStatus">לא מחובר — הנתונים נשמרים מקומית במכשיר.</div></div>
    <div>ניצחונות: <b id="pWins">0</b> | משחקים: <b id="pGames">0</b> | קלפים שנצברו סה"כ: <b id="pCollected">0</b> | מטבעות: <b id="pCoins">0</b></div>
    <div style="margin-top:8px">עיצוב מצויד: <b id="pTheme">Classic</b></div>
-   <div class="social-card" id="socialApp"><h3>🌐 Card Social</h3><div class="small">שתף רגעים מהמשחק והתחבר לקהילה.</div><form id="socialPostForm" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><input id="socialPostInput" maxlength="500" placeholder="מה קורה אצלך בעולם הקלפים?" style="flex:1;min-width:180px;padding:12px;border-radius:12px;background:#07111f;color:#fff;border:1px solid #38546b"><button type="submit">פרסם</button></form><div id="socialFeed" class="feed"><div class="small">התחבר לחשבון Google כדי לראות ולפרסם בפיד.</div></div></div>\n   <div id="adminPanel" class="hidden"><h3>🛠️ Admin Panel</h3><div id="adminStatus" class="small">טוען משתמשים...</div><div id="adminUsers"></div></div>
+   <div class="social-card" id="socialApp"><h3>🌐 Card Social</h3><div class="small">שתף רגעים מהמשחק והתחבר לקהילה.</div><div class="social-card"><b>🏆 לוח מובילים</b><div id="socialLeaderboard" class="feed small">התחבר כדי לראות דירוגים.</div></div><div class="social-card"><b>🔎 מצא שחקנים</b><form id="playerSearchForm" style="display:flex;gap:8px;margin:8px 0"><input id="playerSearchInput" maxlength="80" placeholder="שם או אימייל" style="flex:1;min-width:0;padding:10px;border-radius:10px;background:#07111f;color:#fff;border:1px solid #38546b"><button>חפש</button></form><div id="playerResults" class="feed small"></div></div><form id="socialPostForm" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><input id="socialPostInput" maxlength="500" placeholder="מה קורה אצלך בעולם הקלפים?" style="flex:1;min-width:180px;padding:12px;border-radius:12px;background:#07111f;color:#fff;border:1px solid #38546b"><button type="submit">פרסם</button></form><div id="socialFeed" class="feed"><div class="small">התחבר לחשבון Google כדי לראות ולפרסם בפיד.</div></div></div>\n   <div id="adminPanel" class="hidden"><h3>🛠️ Admin Panel</h3><div id="adminStatus" class="small">טוען משתמשים...</div><div id="adminUsers"></div></div>
   </div>
  </div>
 
@@ -993,7 +993,16 @@ async function socialRequest(path,options={}){
  const d=await r.json();if(!r.ok)throw new Error(d.error||'הבקשה נכשלה');return d;
 }
 function safeText(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
-async function loadSocialFeed(){
+
+async function loadLeaderboard(){
+ const box=document.getElementById('socialLeaderboard');if(!box||!authToken)return;
+ try{const d=await socialRequest('/api/social/leaderboard');box.innerHTML='';d.users.forEach((u,i)=>{const row=document.createElement('div');row.className='post';row.textContent=(i+1)+'. '+(u.name||u.email||'שחקן')+' · 🏆 '+u.wins+' · 🃏 '+u.collected;box.appendChild(row);});if(!d.users.length)box.textContent='אין עדיין נתונים.';}catch(e){box.textContent=e.message;}
+}
+document.getElementById('playerSearchForm')?.addEventListener('submit',async e=>{
+ e.preventDefault();const q=document.getElementById('playerSearchInput').value.trim(),box=document.getElementById('playerResults');
+ try{const d=await socialRequest('/api/social/players?q='+encodeURIComponent(q));box.innerHTML='';d.players.forEach(p=>{const row=document.createElement('div');row.className='post post-head';const label=document.createElement('span');label.textContent=(p.name||p.email||'שחקן')+' · '+p.wins+' ניצחונות';const b=document.createElement('button');b.textContent='עקוב';b.onclick=async()=>{try{const x=await socialRequest('/api/social/follow/'+encodeURIComponent(p.google_sub),{method:'POST',body:'{}'});b.textContent=x.following?'במעקב':'עקוב';}catch(err){toast(err.message);}};row.append(label,b);box.appendChild(row);});if(!d.players.length)box.textContent='לא נמצאו שחקנים.';}catch(err){box.textContent=err.message;}
+});
+\nasync function loadSocialFeed(){
  const box=document.getElementById('socialFeed');if(!box)return;
  if(!authToken){box.innerHTML='<div class="small">התחבר לחשבון Google כדי לראות ולפרסם בפיד.</div>';return;}
  try{
