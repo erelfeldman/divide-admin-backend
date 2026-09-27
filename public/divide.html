@@ -86,13 +86,197 @@ button.ghost{background:transparent;border:2px solid var(--gold);color:var(--gol
 /* ---- settings ---- */
 .setrow{display:flex;justify-content:space-between;align-items:center;padding:8px 4px;border-bottom:1px solid rgba(255,255,255,.1);gap:10px;flex-wrap:wrap}
 input[type=range]{width:140px}
-.authbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--panel2);text-align:center}.authstatus{margin:8px 0;font-size:.9em}#adminPanel{margin-top:14px;text-align:right}.adminuser{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.12);flex-wrap:wrap}.adminuser button{margin:0}</style>
-</head>
+.authbox{margin-top:12px;padding:12px;border-radius:12px;background:var(--panel2);text-align:center}.authstatus{margin:8px 0;font-size:.9em}#adminPanel{margin-top:14px;text-align:right}.adminuser{display:flex;justify-content:space-between;align-items:center;gap:8px;padding:8px;border-bottom:1px solid rgba(255,255,255,.12);flex-wrap:wrap}.adminuser button{margin:0}
+/* ===== DIVIDE PREMIUM VISUAL REFRESH ===== */
+:root{
+ --felt:#071b18;--felt2:#0b3328;--bg:#030908;--panel:rgba(7,20,18,.72);--panel2:rgba(12,30,26,.88);
+ --gold:#f4d06f;--gold2:#c79a35;--txt:#f8faf7;--muted:#aabbb4;
+ --accent:#63e6be;--card-bg:#fffdf7;--ink:#17201d;
+}
+html,body{
+ background:
+ radial-gradient(circle at 50% -10%,rgba(244,208,111,.16),transparent 32%),
+ radial-gradient(circle at 10% 20%,rgba(99,230,190,.08),transparent 30%),
+ linear-gradient(145deg,#020706 0%,#071c17 48%,#03100d 100%);
+ background-attachment:fixed;
+}
+body:before{
+ content:"";position:fixed;inset:0;pointer-events:none;z-index:-1;opacity:.28;
+ background-image:radial-gradient(rgba(255,255,255,.12) 1px,transparent 1px);
+ background-size:4px 4px;
+ mask-image:linear-gradient(to bottom,black,transparent 90%);
+}
+#app{max-width:1400px;width:100%;margin:auto}
+#setup{padding:28px 18px 42px;gap:18px}
+#setup h1{
+ font-size:clamp(3rem,7vw,5.4rem);letter-spacing:-.06em;margin:10px 0 2px;
+ color:#fff8dc;
+ text-shadow:0 4px 0 rgba(0,0,0,.35),0 0 35px rgba(244,208,111,.24);
+ position:relative;
+}
+#setup h1:after{
+ content:"THE CARD GAME";display:block;font-size:.19em;letter-spacing:.28em;color:var(--gold);
+ margin-top:-4px;font-weight:700;
+}
+.tabs{
+ width:min(720px,100%);justify-content:center;gap:4px;padding:5px;
+ background:rgba(3,10,9,.72);border:1px solid rgba(244,208,111,.18);
+ border-radius:18px;backdrop-filter:blur(16px);box-shadow:0 12px 35px rgba(0,0,0,.28);
+}
+.tabs button{
+ flex:1;min-width:0;border-radius:13px;padding:11px 10px;background:transparent;
+ color:var(--muted);box-shadow:none;border:1px solid transparent;
+}
+.tabs button:hover{color:#fff;background:rgba(255,255,255,.05);transform:none}
+.tabs .tabbtn.active{
+ color:#15120a;background:linear-gradient(135deg,#fff4bc,#e5bd55);
+ outline:none;border-color:#fff5c8;box-shadow:0 5px 18px rgba(244,208,111,.22);
+}
+.panel{
+ max-width:720px;padding:24px;border-radius:22px;
+ background:linear-gradient(145deg,rgba(14,34,29,.88),rgba(5,15,13,.86));
+ border:1px solid rgba(255,255,255,.09);box-shadow:0 18px 55px rgba(0,0,0,.32),inset 0 1px rgba(255,255,255,.05);
+ backdrop-filter:blur(18px);
+}
+.panel:before{
+ content:"";display:block;width:54px;height:3px;margin:0 auto 18px;border-radius:99px;
+ background:linear-gradient(90deg,transparent,var(--gold),transparent);opacity:.7;
+}
+button{
+ border-radius:13px;padding:11px 19px;
+ background:linear-gradient(145deg,#fff0a9,#d7aa43 72%,#b88725);
+ color:#211a08;border:1px solid rgba(255,248,198,.75);
+ box-shadow:0 4px 0 #79591d,0 8px 20px rgba(0,0,0,.28);
+}
+button:hover{transform:translateY(-2px);filter:brightness(1.05)}
+button:active{transform:translateY(1px);box-shadow:0 2px 0 #79591d}
+button.ghost{background:rgba(255,255,255,.035);color:var(--gold);border:1px solid rgba(244,208,111,.5);box-shadow:none}
+#startBtn{font-size:1.08em;padding:14px 28px;min-width:min(360px,100%)}
+.rulesbox{
+ margin-top:18px!important;padding:16px 18px;border-radius:15px;
+ background:rgba(0,0,0,.22);border:1px solid rgba(255,255,255,.06);color:#cbd8d3;line-height:1.75;
+}
+#game{
+ position:relative;min-height:100vh;
+ background:
+ radial-gradient(ellipse at 50% 48%,rgba(22,103,73,.32),transparent 52%),
+ linear-gradient(rgba(0,0,0,.08),rgba(0,0,0,.25));
+}
+#top{
+ padding:14px 18px;gap:10px;
+ background:linear-gradient(180deg,rgba(2,9,7,.9),rgba(2,9,7,.5));
+ border-bottom:1px solid rgba(244,208,111,.12);
+ backdrop-filter:blur(12px);
+}
+.pcard{
+ min-width:150px;padding:10px 15px;border-radius:15px;
+ background:linear-gradient(145deg,rgba(23,45,39,.92),rgba(7,20,17,.92));
+ border:1px solid rgba(255,255,255,.08);
+ box-shadow:0 7px 20px rgba(0,0,0,.2);transition:.2s;
+}
+.pcard.turn{
+ border-color:var(--gold);box-shadow:0 0 0 1px rgba(244,208,111,.3),0 0 28px rgba(244,208,111,.22);
+}
+.pcard .pname{color:#fff}
+#mid{gap:clamp(32px,8vw,110px);padding:28px 18px}
+#pileArea,#deckArea{gap:12px}
+#relText{
+ padding:10px 18px;border-radius:999px;
+ background:rgba(3,12,10,.8);border:1px solid rgba(244,208,111,.18);
+ color:#e7eee9;box-shadow:0 8px 25px rgba(0,0,0,.18);
+}
+#pileStack{width:100px;height:125px}
+.card{
+ width:78px;height:112px;border-radius:12px;padding:7px 8px;
+ font-size:1.15em;border:1px solid #d8d4c7;
+ box-shadow:0 8px 18px rgba(0,0,0,.34),0 1px 0 #fff inset;
+ background:
+ radial-gradient(circle at 20% 15%,rgba(255,255,255,.9),transparent 22%),
+ linear-gradient(145deg,#fffefa,#f4f0e6);
+ transition:transform .2s cubic-bezier(.2,.8,.2,1),box-shadow .2s;
+}
+.card:after{
+ content:"";position:absolute;inset:3px;border-radius:9px;border:1px solid rgba(0,0,0,.06);pointer-events:none;
+}
+.card.red{color:#c52e39}
+.card.playable{box-shadow:0 0 0 2px rgba(244,208,111,.9),0 12px 28px rgba(0,0,0,.38)}
+.card.playable:hover{transform:translateY(-13px) scale(1.055);box-shadow:0 0 0 3px var(--gold),0 18px 32px rgba(0,0,0,.42)}
+.card.selected{outline:none;transform:translateY(-24px) scale(1.05);box-shadow:0 0 0 3px #fff3b0,0 0 30px rgba(244,208,111,.35)}
+.cardback{
+ width:78px;height:112px;border-radius:12px;
+ background:
+ radial-gradient(circle,rgba(255,255,255,.13) 1.5px,transparent 2px) 0 0/12px 12px,
+ linear-gradient(135deg,var(--backA),var(--backB));
+ box-shadow:0 10px 24px rgba(0,0,0,.4),inset 0 0 0 2px rgba(255,255,255,.16),inset 0 0 0 6px rgba(0,0,0,.15);
+}
+.cardback:after{
+ content:"♦";display:grid;place-items:center;height:100%;font-size:2.5em;color:rgba(255,255,255,.22);
+ text-shadow:0 2px 5px rgba(0,0,0,.35);
+}
+#deckCount{padding:6px 12px;border:1px solid rgba(255,255,255,.08);color:var(--muted)}
+#hand{
+ min-height:145px;padding:22px 18px 18px;gap:8px;
+ background:linear-gradient(180deg,rgba(2,9,7,.35),rgba(2,9,7,.9));
+ border-top:1px solid rgba(244,208,111,.1);
+ box-shadow:0 -15px 35px rgba(0,0,0,.16);
+}
+#controls{padding:15px 18px 24px;background:rgba(2,8,6,.82)}
+#controls button{min-width:145px}
+.themegrid{gap:16px}
+.themecard{
+ padding:13px;border-radius:17px;background:rgba(2,12,10,.55);
+ border:1px solid rgba(255,255,255,.08);box-shadow:0 8px 25px rgba(0,0,0,.2);
+ transition:transform .2s,border-color .2s;
+}
+.themecard:hover{transform:translateY(-4px);border-color:rgba(244,208,111,.4)}
+.swatch{height:82px;border-radius:12px;margin-bottom:10px;box-shadow:inset 0 0 0 1px rgba(255,255,255,.22),0 7px 18px rgba(0,0,0,.25)}
+.setrow{padding:13px 5px;color:#dce6e1}
+input[type=range]{accent-color:var(--gold)}
+#toasts{top:18px}
+.toast{
+ padding:10px 17px;border-radius:999px;background:rgba(5,16,14,.92);
+ border:1px solid rgba(244,208,111,.42);box-shadow:0 10px 30px rgba(0,0,0,.35);backdrop-filter:blur(12px);
+}
+.bannerbox{
+ border:1px solid rgba(244,208,111,.3);
+ background:linear-gradient(145deg,rgba(21,39,34,.97),rgba(5,13,11,.97));
+ border-radius:22px;padding:30px 42px;box-shadow:0 25px 80px rgba(0,0,0,.55),0 0 40px rgba(244,208,111,.08);
+}
+#coinflip,#banner{background:rgba(0,4,3,.78);backdrop-filter:blur(10px)}
+.coin{box-shadow:0 10px 35px rgba(244,208,111,.28),inset 0 2px rgba(255,255,255,.7)}
+@media(max-width:700px){
+ #setup{padding:20px 12px 30px}
+ .tabs button{font-size:.82em;padding:10px 5px}
+ .panel{padding:18px}
+ .pcard{min-width:110px}
+ #mid{gap:30px;padding:22px 8px}
+ .card,.cardback{width:62px;height:90px}
+ #pileStack{width:82px;height:102px}
+ #hand{min-height:126px;padding:18px 7px 12px;gap:5px}
+ #controls button{min-width:125px}
+}
+@media(max-width:420px){
+ #setup h1{font-size:3.2rem}
+ .pcard{min-width:92px;padding:8px 9px}
+ .small{font-size:.72em}
+ .card,.cardback{width:53px;height:77px;font-size:.82em;border-radius:9px}
+ .card:after{border-radius:6px}
+}
+
+</style>
+<style>
+.brand-mark{width:58px;height:58px;display:grid;place-items:center;margin-top:4px;border:1px solid rgba(244,208,111,.45);border-radius:18px;color:var(--gold);font-size:1.7rem;background:rgba(244,208,111,.06);box-shadow:0 0 30px rgba(244,208,111,.08);transform:rotate(45deg)}
+.brand-mark::first-letter{transform:rotate(-45deg)}
+.table-label,.hand-label,.pile-label{font-size:.68rem;letter-spacing:.22em;color:rgba(244,208,111,.62);font-weight:800}
+.hand-label{position:absolute;bottom:155px;right:22px;z-index:2}
+.table-label{position:absolute;top:92px;left:50%;transform:translateX(-50%)}
+@media(max-width:700px){.hand-label{bottom:137px}.table-label{top:86px}}
+</style></head>
 <body>
 <div id="app">
 
  <div id="setup">
-  <h1>🃏 Divide</h1>
+  <div class="brand-mark">♠</div><h1>Divide</h1>
   <div class="tabs">
    <button class="tabbtn active" data-tab="play">משחק</button>
    <button class="tabbtn" data-tab="shop">חנות</button>
@@ -143,13 +327,14 @@ input[type=range]{width:140px}
  <div id="game" class="hidden" style="display:none;flex-direction:column;height:100%">
   <div id="top"></div>
   <div id="mid">
+   <div class="table-label">THE TABLE</div>
    <div id="deckArea">
-    <div class="cardback" id="deckVisual"></div>
+    <div class="pile-label">DECK</div><div class="cardback" id="deckVisual"></div>
     <div id="deckCount">בחפיסה: 40</div>
    </div>
-   <div id="pileArea"><div id="pileStack"></div><div id="relText"></div></div>
+   <div id="pileArea"><div class="pile-label">PLAY PILE</div><div id="pileStack"></div><div id="relText"></div></div>
   </div>
-  <div id="hand"></div>
+  <div class="hand-label">YOUR HAND</div><div id="hand"></div>
   <div id="controls">
    <button id="playBtn">הנח קלפים</button>
    <button id="noMoveBtn" class="hidden">אין לי מהלך</button>
