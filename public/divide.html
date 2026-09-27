@@ -330,6 +330,25 @@ pointer-events:none}
  #hand .card:hover{transform:translateY(-16px) scale(1.08)!important}
  .bannerbox{padding:24px 18px}
 }
+</style><style id="divide-social-upgrade">
+:root{--bg:#07111f;--felt:#12304a;--felt2:#0d2539;--panel:rgba(11,25,42,.9);--panel2:rgba(16,35,57,.94);--txt:#f7fbff;--muted:#b8c8d8;--gold:#ffd76a;--accent:#55d6ff}
+html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0,#07111f 42%,#030812 100%)}
+#setup{color:var(--txt)} .panel{color:var(--txt);background:linear-gradient(145deg,rgba(18,42,66,.95),rgba(6,17,30,.95));}
+.rulesbox{color:#e6f0f8!important}.small{color:#c8d6e2}
+#setup h1{color:#fff;text-shadow:0 0 32px rgba(85,214,255,.25)}
+.tabs{background:rgba(4,12,22,.82);border-color:rgba(85,214,255,.2)}
+.tabs button{color:#c9d8e5}.tabs .tabbtn.active{color:#07111f;background:linear-gradient(135deg,#fff3b2,#ffd05a)}
+#game{background:radial-gradient(ellipse at 50% 48%,rgba(26,91,133,.4),transparent 55%),linear-gradient(#06101b,#081a2a)}
+#top{background:linear-gradient(180deg,rgba(4,12,22,.96),rgba(4,12,22,.7));border-color:rgba(85,214,255,.18)}
+.pcard{background:linear-gradient(145deg,rgba(24,52,78,.97),rgba(8,22,36,.97));color:#f5faff}
+#relText,#deckCount{color:#eff8ff;background:rgba(5,16,29,.88);border:1px solid rgba(85,214,255,.18)}
+#hand{background:linear-gradient(180deg,rgba(5,15,26,.15),rgba(4,12,22,.78));border-top:1px solid rgba(85,214,255,.1)}
+#controls{background:rgba(4,12,22,.78)}
+.social-nav{width:min(720px,100%);display:flex;gap:8px;margin:0 auto 2px}.social-nav button{flex:1}
+.social-card{margin-top:12px;padding:16px;border-radius:18px;background:linear-gradient(145deg,rgba(24,52,78,.9),rgba(7,19,32,.95));border:1px solid rgba(85,214,255,.14)}
+.feed{display:grid;gap:10px;margin-top:12px}.post{padding:12px;border-radius:15px;background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.07)}
+.post-head{display:flex;justify-content:space-between;gap:8px;align-items:center}.avatar{width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#55d6ff,#6f7cff);display:inline-flex;align-items:center;justify-content:center;font-weight:900;color:#06101b}
+.reaction-row{display:flex;gap:8px;margin-top:8px}.reaction{background:rgba(255,255,255,.06);color:#eaf5ff;border:1px solid rgba(255,255,255,.08);box-shadow:none;padding:6px 10px}
 </style></head>
 <body>
 <div id="app">
@@ -343,7 +362,7 @@ pointer-events:none}
    <button class="tabbtn" data-tab="profile">פרופיל</button>
   </div>
 
-  <div class="panel" id="tab-play">
+  <div class="social-card" id="socialPreview"><b>🃏 Card Social</b><div class="small">שתף תוצאות, עיצובים ורגעים מהמשחק עם שחקנים אחרים.</div><div class="feed"><div class="post"><div class="post-head"><span><span class="avatar">D</span> <b>Divide Community</b></span><span class="small">עכשיו</span></div><div style="margin-top:8px">🏆 משחק חדש, שיא חדש. מי מצליח לצבור הכי הרבה קלפים?</div><div class="reaction-row"><button class="reaction" type="button">♥ 12</button><button class="reaction" type="button">💬 4</button></div></div></div></div><div class="panel" id="tab-play">
    <div>מספר שחקנים (אתה + AI):</div>
    <div class="btnrow" id="pcount" style="margin:10px 0"></div>
    <button id="startBtn">התחל משחק (הטלת מטבע)</button>
