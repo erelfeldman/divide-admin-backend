@@ -398,7 +398,7 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
    <div class="authbox"><div id="googleSignInBtn"></div><div class="authstatus" id="authStatus">לא מחובר — הנתונים נשמרים מקומית במכשיר.</div></div>
    <div>ניצחונות: <b id="pWins">0</b> | משחקים: <b id="pGames">0</b> | קלפים שנצברו סה"כ: <b id="pCollected">0</b> | מטבעות: <b id="pCoins">0</b></div>
    <div style="margin-top:8px">עיצוב מצויד: <b id="pTheme">Classic</b></div>
-   <div class="social-card" id="socialApp"><h3>🌐 Card Social</h3><div class="small">שתף רגעים מהמשחק והתחבר לקהילה.</div><div class="social-card"><b>🏆 לוח מובילים</b><div id="socialLeaderboard" class="feed small">התחבר כדי לראות דירוגים.</div></div><div class="social-card"><b>🔎 מצא שחקנים</b><form id="playerSearchForm" style="display:flex;gap:8px;margin:8px 0"><input id="playerSearchInput" maxlength="80" placeholder="שם או אימייל" style="flex:1;min-width:0;padding:10px;border-radius:10px;background:#07111f;color:#fff;border:1px solid #38546b"><button>חפש</button></form><div id="playerResults" class="feed small"></div></div><form id="socialPostForm" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><input id="socialPostInput" maxlength="500" placeholder="מה קורה אצלך בעולם הקלפים?" style="flex:1;min-width:180px;padding:12px;border-radius:12px;background:#07111f;color:#fff;border:1px solid #38546b"><button type="submit">פרסם</button></form><div id="socialFeed" class="feed"><div class="small">התחבר לחשבון Google כדי לראות ולפרסם בפיד.</div></div></div>
+   <div class="social-card" id="socialApp"><h3>🌐 Card Social</h3><div class="small">שתף רגעים מהמשחק והתחבר לקהילה.</div><div class="social-card"><b>🏆 לוח מובילים</b><div id="socialLeaderboard" class="feed small">התחבר כדי לראות דירוגים.</div></div><div class="social-card"><b>🔎 מצא שחקנים</b><form id="playerSearchForm" style="display:flex;gap:8px;margin:8px 0"><input id="playerSearchInput" maxlength="80" placeholder="שם או אימייל" style="flex:1;min-width:0;padding:10px;border-radius:10px;background:#07111f;color:#fff;border:1px solid #38546b"><button>חפש</button></form><div id="playerResults" class="feed small"></div></div><form id="socialPostForm" style="display:flex;gap:8px;margin:12px 0;flex-wrap:wrap"><input id="socialPostInput" maxlength="500" placeholder="מה קורה אצלך בעולם הקלפים?" style="flex:1;min-width:180px;padding:12px;border-radius:12px;background:#07111f;color:#fff;border:1px solid #38546b"><button type="submit">פרסם</button></form><div id="socialFeed" class="feed"><div class="small">התחבר לחשבון Google כדי לראות ולפרסם בפיד.</div></div><div class="social-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">🏆 הישגים</h3><button id="loadAchievements" class="ghost" type="button">רענן</button></div><div id="achievementsBox" class="feed small">טוען...</div></div><div class="social-card"><div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><h3 style="margin:0">🔔 התראות</h3><button id="loadNotifications" class="ghost" type="button">רענן</button></div><div id="notificationsBox" class="feed small">טוען...</div></div></div>
    <div id="adminPanel" class="hidden"><h3>🛠️ Admin Panel</h3><div id="adminStatus" class="small">טוען משתמשים...</div><div id="adminUsers"></div></div>
   </div>
  </div>
@@ -988,7 +988,18 @@ async function resetUserCoins(googleSub,name){
  }catch(e){toast('איפוס נכשל: '+e.message);}
 }
 
-// =============== CARD SOCIAL ===============
+
+async function loadAchievements(){
+ const box=document.getElementById('achievementsBox');if(!box||!authToken)return;
+ try{const d=await socialRequest('/api/social/achievements');box.innerHTML='';d.achievements.forEach(a=>{const x=document.createElement('div');x.className='post';x.style.opacity=a.earned?'1':'.45';x.textContent=a.icon+' '+a.name+' — '+a.text+(a.earned?' ✓':' 🔒');box.appendChild(x);});}catch(e){box.textContent=e.message;}
+}
+async function loadNotifications(){
+ const box=document.getElementById('notificationsBox');if(!box||!authToken)return;
+ try{const d=await socialRequest('/api/social/notifications');box.innerHTML='';if(!d.notifications.length){box.textContent='אין התראות חדשות.';return;}d.notifications.forEach(n=>{const x=document.createElement('div');x.className='post';x.innerHTML='<b>'+safeText(n.type)+'</b> · '+safeText(n.text);x.onclick=async()=>{if(!n.read_at)await socialRequest('/api/social/notifications/'+n.id+'/read',{method:'POST',body:'{}'});x.style.opacity='.55';};box.appendChild(x);});}catch(e){box.textContent=e.message;}
+}
+document.getElementById('loadAchievements')?.addEventListener('click',loadAchievements);
+document.getElementById('loadNotifications')?.addEventListener('click',loadNotifications);
+\n// =============== CARD SOCIAL ===============
 async function socialRequest(path,options={}){
  if(!authToken)throw new Error('צריך להתחבר עם Google קודם');
  const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken,...(options.headers||{})}});
