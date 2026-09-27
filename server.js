@@ -22,7 +22,7 @@ const pool = DATABASE_URL ? new Pool({
 }) : null;
 
 if (!GOOGLE_CLIENT_ID || (!ADMIN_UID && ADMIN_EMAILS.length === 0) || !DATABASE_URL) {
-  throw new Error('Set GOOGLE_CLIENT_ID, ADMIN_UID and DATABASE_URL as server environment variables (never hardcode secrets in a file you commit or ship to the browser).');
+  throw new Error('Set GOOGLE_CLIENT_ID, ADMIN_EMAILS (or legacy ADMIN_UID) and DATABASE_URL as server environment variables.');
 }
 
 const client = new OAuth2Client(GOOGLE_CLIENT_ID);
