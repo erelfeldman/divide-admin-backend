@@ -383,7 +383,7 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
 <button class="gamepick" data-game="durak"><span class="emoji">🛡️</span><span class="gname">דורק</span></button>
 </div><div id="gamePlayerLabel">מספר שחקנים (אתה + AI):</div>
    <div class="btnrow" id="pcount" style="margin:10px 0"></div>
-   <button id="startBtn">התחל משחק (הטלת מטבע)</button>
+   <div class="btnrow"><button id="startBtn">התחל משחק (הטלת מטבע)</button><button id="tutorialBtn" class="ghost">🎬 טוטוריאל</button></div>
    <div class="rulesbox" style="margin-top:14px">
     כל שחקן מתחיל עם 5 קלפים. יש להניח קלף (או שילוב קלפים שסכומו) גדול/שווה ומתחלק ללא שארית בקלף העליון הרלוונטי.
     A אפשר על הכל ומאפס את הדרישה. 2 אפשר על הכל, אך מתייחסים לקלף שמתחתיו. שחקן ללא מהלך יוצא מהסבב.
@@ -398,7 +398,7 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
   </div>
 
   <div class="panel hidden" id="tab-settings">
-   <div class="setrow"><span>מצב תצוגה</span><span class="btnrow">
+   <div class="setrow"><span id="languageLabel">שפה</span><select id="languageSelect" class="arcade-input"><option value="he">עברית</option><option value="en">English</option><option value="ru">Русский</option><option value="ar">العربية</option></select></div><div class="setrow"><span>מצב תצוגה</span><span class="btnrow">
      <button data-mode="light">בהיר</button><button data-mode="dark">כהה</button><button data-mode="system">מערכת</button></span></div>
    <div class="setrow"><span>צלילים</span><label><input type="checkbox" id="soundOn"> מופעל</label></div>
    <div class="setrow"><span>מוזיקת רקע</span><label><input type="checkbox" id="musicOn"> מופעל</label></div>
@@ -439,7 +439,7 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
   </div>
  </div>
 
- <div id="arcade">
+ <div id="tutorialModal" class="hidden" style="position:fixed;inset:0;z-index:2000;background:rgba(0,0,0,.82);backdrop-filter:blur(12px);align-items:center;justify-content:center;padding:16px"><div style="width:min(900px,100%);background:linear-gradient(145deg,#102b43,#06101b);border:1px solid rgba(85,214,255,.25);border-radius:24px;padding:18px;box-shadow:0 30px 100px rgba(0,0,0,.6)"><div style="display:flex;justify-content:space-between;align-items:center;gap:12px"><h2 id="tutorialTitle" style="margin:0">🎬 Divide Tutorial</h2><button id="tutorialClose" class="ghost">✕</button></div><div id="tutorialStage" style="height:min(52vh,420px);margin-top:14px;border-radius:18px;background:radial-gradient(circle,#1c4a68,#06101b);display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;overflow:hidden"><div id="tutorialVisual" style="font-size:5rem"></div><div id="tutorialCaption" style="font-size:1.2rem;font-weight:800;max-width:760px;padding:0 20px"></div></div><div style="display:flex;align-items:center;gap:10px;margin-top:14px"><button id="tutorialPlay">▶️</button><input id="tutorialProgress" type="range" min="0" max="100" value="0" style="flex:1"><span id="tutorialStep" class="small"></span></div></div></div><div id="arcade">
 <div class="arcade-head"><div><div class="arcade-title" id="arcadeTitle">משחק</div><div class="arcade-status" id="arcadeStatus"></div></div><button id="arcadeExit" class="ghost">חזרה לתפריט</button></div>
 <div class="arcade-body"><div class="arcade-table" id="arcadeTable"></div><div class="arcade-actions" id="arcadeActions"></div><div class="arcade-log" id="arcadeLog"></div></div>
 </div>
@@ -452,14 +452,55 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
 function adminCoinsUI(){return !!window.__divideIsAdmin;}
 function formatCoins(n){return adminCoinsUI()?'∞':String(Math.max(0,Math.floor(Number(n)||0)));}
 // Wrap common coin display/update points safely.
-const _oldStartArcade=startArcade;
+\n
+// =============== LANGUAGE + VIDEO TUTORIAL ===============
+const LANG={
+ he:{dir:'rtl',tabs:['משחק','חנות','הגדרות','פרופיל'],players:'מספר שחקנים (אתה + AI):',start:'התחל משחק',tutorial:'🎬 טוטוריאל',shop:'מטבעות',play:'הנח קלפים',noMove:'אין לי מהלך',menu:'תפריט ראשי',language:'שפה',rules:'כל שחקן מתחיל עם 5 קלפים. יש להניח קלף או שילוב שסכומו גדול/שווה ומתחלק ללא שארית בקלף הרלוונטי. A פותח את הדרישה, 2 משקף לקלף שמתחתיו.',games:{divide:'Divide',poker:'פוקר',yaniv:'יניב',war:'מלחמה',durak:'דורק'}},
+ en:{dir:'ltr',tabs:['Game','Shop','Settings','Profile'],players:'Players (You + AI):',start:'Start Game',tutorial:'🎬 Tutorial',shop:'Coins',play:'Play Cards',noMove:'No Move',menu:'Main Menu',language:'Language',rules:'Each player starts with 5 cards. Play a card or a combination whose sum is divisible by the relevant card. A opens the requirement; 2 mirrors the card beneath.',games:{divide:'Divide',poker:'Poker',yaniv:'Yaniv',war:'War',durak:'Durak'}},
+ ru:{dir:'ltr',tabs:['Игра','Магазин','Настройки','Профиль'],players:'Игроки (Вы + AI):',start:'Начать игру',tutorial:'🎬 Обучение',shop:'Монеты',play:'Сыграть карты',noMove:'Нет хода',menu:'Главное меню',language:'Язык',rules:'У каждого игрока 5 карт. Можно сыграть карту или комбинацию с делимостью по текущему значению. Туз открывает ход, двойка отражает карту под ним.',games:{divide:'Divide',poker:'Покер',yaniv:'Янив',war:'Война',durak:'Дурак'}},
+ ar:{dir:'rtl',tabs:['اللعب','المتجر','الإعدادات','الملف الشخصي'],players:'عدد اللاعبين (أنت + الذكاء الاصطناعي):',start:'ابدأ اللعبة',tutorial:'🎬 شرح',shop:'العملات',play:'العب البطاقات',noMove:'لا يوجد تحرك',menu:'القائمة الرئيسية',language:'اللغة',rules:'يبدأ كل لاعب بخمس بطاقات. يمكن لعب بطاقة أو مجموعة مجموعها تقبل القسمة على القيمة الحالية. الآس يفتح الدور والاثنان يعكسان البطاقة تحته.',games:{divide:'Divide',poker:'بوكر',yaniv:'يانيف',war:'حرب',durak:'دوراك'}}
+};
+let currentLang=localStorage.getItem('divide_lang')||'he';
+let currentSelectedGame='divide';
+function tr(){return LANG[currentLang]||LANG.he}
+function applyLanguage(lang){
+ currentLang=LANG[lang]?lang:'he';localStorage.setItem('divide_lang',currentLang);
+ const L=tr();document.documentElement.lang=currentLang;document.documentElement.dir=L.dir;
+ const tabs=[...document.querySelectorAll('.tabbtn')];tabs.forEach((b,i)=>b.textContent=L.tabs[i]||b.textContent);
+ const p=document.getElementById('gamePlayerLabel');if(p)p.textContent=L.players;
+ const s=document.getElementById('startBtn');if(s)s.textContent=L.start;
+ const tut=document.getElementById('tutorialBtn');if(tut)tut.textContent=L.tutorial;
+ const ll=document.getElementById('languageLabel');if(ll)ll.textContent=L.language;
+ const pb=document.getElementById('playBtn');if(pb)pb.textContent=L.play;
+ const nb=document.getElementById('noMoveBtn');if(nb)nb.textContent=L.noMove;
+ const ng=document.getElementById('newGameBtn');if(ng)ng.textContent=L.menu;
+ const rules=document.querySelector('.rulesbox');if(rules)rules.textContent=L.rules;
+ document.querySelectorAll('.gamepick').forEach(b=>{const k=b.dataset.game;const g=b.querySelector('.gname');if(g)g.textContent=L.games[k]});
+ if(document.getElementById('languageSelect'))document.getElementById('languageSelect').value=currentLang;
+}
+document.getElementById('languageSelect')?.addEventListener('change',e=>applyLanguage(e.target.value));
+const TUTORIALS={
+ divide:[['🃏','בחר משחק Divide והמתן לתור שלך'],['1️⃣','בחר קלף אחד או כמה קלפים ביד'],['➗','הסכום צריך לעמוד בחוקי החלוקה'],['🅰️','אס פותח את הדרישה'],['2️⃣','2 משקף לקלף שמתחתיו'],['🏆','השחקן האחרון שנשאר לוקח את הערימה']],
+ poker:[['🂡','מקבלים 5 קלפים'],['👀','בדוק את היד וחשוב על ההימור'],['💰','בחר: השווה, העלה או פרוש'],['🏆','היד הטובה ביותר זוכה בקופה']],
+ yaniv:[['🧮','המטרה היא להגיע לניקוד נמוך'],['🃏','בחר קלפים שניתן לזרוק'],['📣','כשאתה חושב שהניקוד נמוך — קרא יניב'],['🏆','מי שצובר הכי מעט נקודות מנצח']],
+ war:[['⚔️','כל שחקן הופך קלף'],['🔥','הקלף הגבוה יותר מנצח'],['🃏','באותו ערך מתחילה מלחמה'],['🏆','המנצח אוסף את הקלפים']],
+ durak:[['🛡️','שחקן אחד תוקף והשני מגן'],['♠️','המגן צריך לכסות כל קלף תוקף'],['🔄','אם לא הצליח — הוא לוקח את הקלפים'],['🏆','מי שנשאר בלי קלפים ראשון מנצח']]
+};
+let tutTimer=null,tutIndex=0,tutRunning=false,tutGame='divide';
+function openTutorial(type=currentSelectedGame||'divide'){tutGame=type;tutIndex=0;tutRunning=true;document.getElementById('tutorialModal').classList.remove('hidden');document.getElementById('tutorialModal').style.display='flex';renderTutorial();}
+function closeTutorial(){tutRunning=false;clearTimeout(tutTimer);document.getElementById('tutorialModal').classList.add('hidden');document.getElementById('tutorialModal').style.display='none';}
+function renderTutorial(){const frames=TUTORIALS[tutGame]||TUTORIALS.divide;const f=frames[tutIndex%frames.length];document.getElementById('tutorialVisual').textContent=f[0];document.getElementById('tutorialCaption').textContent=f[1];document.getElementById('tutorialStep').textContent=(tutIndex+1)+' / '+frames.length;document.getElementById('tutorialProgress').value=Math.round((tutIndex/(frames.length-1||1))*100);if(tutRunning){clearTimeout(tutTimer);tutTimer=setTimeout(()=>{tutIndex++;if(tutIndex>=frames.length)tutIndex=0;renderTutorial();},2800)}}
+document.getElementById('tutorialBtn')?.addEventListener('click',()=>openTutorial());
+document.getElementById('tutorialClose')?.addEventListener('click',closeTutorial);
+document.getElementById('tutorialPlay')?.addEventListener('click',()=>{tutRunning=!tutRunning;document.getElementById('tutorialPlay').textContent=tutRunning?'⏸️':'▶️';renderTutorial()});
+document.getElementById('tutorialProgress')?.addEventListener('input',e=>{const frames=TUTORIALS[tutGame]||TUTORIALS.divide;tutIndex=Math.round((Number(e.target.value)/100)*(frames.length-1));tutRunning=false;document.getElementById('tutorialPlay').textContent='▶️';renderTutorial()});
 \n// =============== ARCADE CARD GAMES ===============
 const GAME_STATE={type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',pokerStage:0,warCards:[],yanivScore:0,durakTrump:null};
 const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
 const SUITS=['♠','♥','♦','♣'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 function makeDeck(){const d=[];for(const s of SUITS)for(const r of RANKS)d.push({s,r,v:RANKS.indexOf(r)+1});return d.sort(()=>Math.random()-.5);}
 function cardHTML(c,cls=''){const red=c.s==='♥'||c.s==='♦';return '<div class="arcade-card '+(red?'red ':'')+cls+'"><span>'+c.r+'</span><span style="font-size:1.6em;text-align:center">'+c.s+'</span><span style="text-align:right">'+c.r+'</span></div>'}
-function setArcade(type){GAME_STATE.type=type;document.querySelectorAll('.gamepick').forEach(b=>b.classList.toggle('active',b.dataset.game===type));document.getElementById('arcadeTitle').textContent=GAMES[type].title;document.getElementById('arcade').style.display='flex';startArcade(type);}
+function setArcade(type){currentSelectedGame=type;GAME_STATE.type=type;document.querySelectorAll('.gamepick').forEach(b=>b.classList.toggle('active',b.dataset.game===type));document.getElementById('arcadeTitle').textContent=GAMES[type].title;document.getElementById('arcade').style.display='flex';startArcade(type);}
 function logArcade(t){document.getElementById('arcadeLog').textContent=t;}
 function renderArcade(){const t=document.getElementById('arcadeTable');const a=document.getElementById('arcadeActions');if(!t)return;
  if(GAME_STATE.type==='war'){t.innerHTML='<div class="rankbox">הקלפים של היריב: '+GAME_STATE.opponent.length+'</div><div class="arcade-row" style="margin:35px 0">'+(GAME_STATE.warCards.map(x=>cardHTML(x)).join('')||'<div class="small">לחץ על ״קרב״</div>')+'</div><div class="rankbox">הקלפים שלך: '+GAME_STATE.hand.length+'</div>';a.innerHTML='<button id="warFight">⚔️ קרב!</button>';return;}
@@ -973,7 +1014,7 @@ const pc=document.getElementById('pcount');
  b.onclick=()=>{ chosen=n; [...pc.children].forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); };
  pc.appendChild(b);
 });
-document.getElementById('startBtn').onclick=()=>startNewGame(chosen);
+document.getElementById('startBtn').onclick=()=>{if(currentSelectedGame==='divide')startNewGame(chosen);else setArcade(currentSelectedGame);};
 
 /* tabs */
 document.querySelectorAll('.tabbtn').forEach(btn=>{
@@ -1007,7 +1048,7 @@ async function onGoogleCredential(response){
   authUser=d.user;setAuthStatus('מחובר/ת כ-'+(d.user.name||d.user.email||'משתמש'));
   document.getElementById('profileTitle').textContent=(d.user.name||d.user.email||'משתמש')+' 👤';
   applyServerUser(d.user);
-  window.__divideIsAdmin=!!d.isAdmin; if(d.isAdmin)showAdminPanel();
+  window.__divideIsAdmin=!!d.isAdmin; if(d.isAdmin)showAdminPanel(); applyLanguage(currentLang);
   loadSocialFeed();
   toast('התחברת בהצלחה');
  }catch(e){authToken=null;setAuthStatus('ההתחברות נכשלה: '+e.message);console.error(e);}
@@ -1105,6 +1146,7 @@ Shop.equipTheme(SAVEDATA.equipped);
 Settings.apply();
 renderShop();
 renderProfile();
+applyLanguage(currentLang);
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script></body>
 </html>
