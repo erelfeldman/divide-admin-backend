@@ -729,14 +729,16 @@ const Deck={
 /* =============== AI =============== */
 const AI={
  chooseMove(hand,rel){
-  if(rel.t==='free'){ const normal=hand.filter(c=>c.r!==14); return [normal.length?normal[0]:hand[0]]; }
-  const singleOK=hand.filter(c=>c.r!==14&&c.r!==2&&Rules.isValidSingle(c,rel));
-  if(singleOK.length) return [singleOK.sort((a,b)=>a.r-b.r)[0]];
-  const two=hand.find(c=>c.r===2); if(two) return [two];
-  const combo=Rules.findCombo(hand,rel);
-  if(combo){ combo.sort((a,b)=>b.r-a.r); return combo; } // strategic order: hardest value last
-  const ace=hand.find(c=>c.r===14); if(ace) return [ace];
-  return null;
+  const candidates=[];
+  if(rel.t==='free'){
+   hand.filter(c=>c.r!==14).sort((a,b)=>a.r-b.r).forEach(c=>candidates.push([c]));
+   const ace=hand.find(c=>c.r===14); if(ace)candidates.unshift([ace]);
+  }else{
+   hand.filter(c=>Rules.isValidSingle(c,rel)).sort((a,b)=>a.r-b.r).forEach(c=>candidates.push([c]));
+   const combo=Rules.findCombo(hand,rel);
+   if(combo)candidates.push(combo.slice().sort((a,b)=>b.r-a.r));
+  }
+  return candidates.find(m=>Rules.isValidPlay(m,rel))||null;
  }
 };
 
@@ -759,9 +761,16 @@ const Game={
  activeCount(){ return this.players.filter(p=>p.active).length; },
 
  async playCards(pIdx,cards){
-  if(this.busy) return; this.busy=true;
+  if(this.busy) return;
   const p=this.players[pIdx];
   const relBefore=Rules.getRelevantCard(this.pile);
+  const validIds=Array.isArray(cards)&&cards.length>0&&cards.every(c=>p.hand.some(h=>h.id===c.id));
+  if(!validIds || !Rules.isValidPlay(cards,relBefore)){
+   toast('מהלך לא חוקי — הדרישה היא '+(relBefore.t==='free'?'פתוחה':relBefore.v));
+   if(p.isAI){ await this.exitPlayer(pIdx); }
+   return;
+  }
+  this.busy=true;
   for(const c of cards){ const idx=p.hand.findIndex(h=>h.id===c.id); p.hand.splice(idx,1); this.pile.push(c); }
   UIRender();
   if(cards.length>1) toast(`${p.name} הניחו/ה שילוב: ${cards.map(c=>rankLabel(c.r)).join(' + ')}`);
@@ -776,6 +785,7 @@ const Game={
   else { this.currentPlayer=this.nextActivePlayer(pIdx); UIRender(); }
   this.loop();
  },
+
  async exitPlayer(pIdx){
   if(this.busy) return; this.busy=true;
   this.players[pIdx].active=false;
