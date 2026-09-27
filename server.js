@@ -21,7 +21,7 @@ const pool = DATABASE_URL ? new Pool({
   ssl: DATABASE_URL.includes('localhost') ? false : { rejectUnauthorized: false }
 }) : null;
 
-if (!GOOGLE_CLIENT_ID || !ADMIN_UID || !DATABASE_URL) {
+if (!GOOGLE_CLIENT_ID || (!ADMIN_UID && ADMIN_EMAILS.length === 0) || !DATABASE_URL) {
   throw new Error('Set GOOGLE_CLIENT_ID, ADMIN_UID and DATABASE_URL as server environment variables (never hardcode secrets in a file you commit or ship to the browser).');
 }
 
@@ -131,6 +131,13 @@ app.post('/api/social/posts/:id/like', requireAuth, async (req,res)=>{
   await pool.query('INSERT INTO social_likes (post_id,google_sub) VALUES ($1,$2) ON CONFLICT DO NOTHING',[req.params.id,req.user.sub]);
   const r=await pool.query('SELECT COUNT(*)::int AS likes FROM social_likes WHERE post_id=$1',[req.params.id]);
   res.json({likes:r.rows[0].likes});
+ }catch(e){res.status(400).json({error:'invalid post'});}
+});
+app.get('/api/social/posts/:id/comments', requireAuth, async (req,res)=>{
+ try{
+  const r=await pool.query(`SELECT c.id,c.body,c.created_at,u.name,u.email FROM social_comments c
+   JOIN users u ON u.google_sub=c.google_sub WHERE c.post_id=$1 ORDER BY c.created_at ASC LIMIT 100`,[req.params.id]);
+  res.json({comments:r.rows});
  }catch(e){res.status(400).json({error:'invalid post'});}
 });
 app.post('/api/social/posts/:id/comments', requireAuth, async (req,res)=>{
