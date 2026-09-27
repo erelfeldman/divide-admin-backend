@@ -499,8 +499,8 @@ document.getElementById('tutorialProgress')?.addEventListener('input',e=>{const 
 // =============== ARCADE CARD GAMES ===============
 const GAME_STATE={type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',pokerStage:0,warCards:[],yanivScore:0,durakTrump:null};
 const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
-const SUITS=['♠','♥','♦','♣'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
-function makeDeck(){const d=[];for(const s of SUITS)for(const r of RANKS)d.push({s,r,v:RANKS.indexOf(r)+1});return d.sort(()=>Math.random()-.5);}
+const ARCADE_SUITS=['♠','♥','♦','♣'], ARCADE_RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
+function makeDeck(){const d=[];for(const s of ARCADE_SUITS)for(const r of ARCADE_RANKS)d.push({s,r,v:ARCADE_RANKS.indexOf(r)+1});return d.sort(()=>Math.random()-.5);}
 function cardHTML(c,cls=''){const red=c.s==='♥'||c.s==='♦';return '<div class="arcade-card '+(red?'red ':'')+cls+'"><span>'+c.r+'</span><span style="font-size:1.6em;text-align:center">'+c.s+'</span><span style="text-align:right">'+c.r+'</span></div>'}
 function setArcade(type){currentSelectedGame=type;GAME_STATE.type=type;document.querySelectorAll('.gamepick').forEach(b=>b.classList.toggle('active',b.dataset.game===type));document.getElementById('arcadeTitle').textContent=GAMES[type].title;document.getElementById('arcade').style.display='flex';startArcade(type);}
 function logArcade(t){document.getElementById('arcadeLog').textContent=t;}
