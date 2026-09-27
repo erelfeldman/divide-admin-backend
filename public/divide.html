@@ -999,7 +999,8 @@ async function loadNotifications(){
 }
 document.getElementById('loadAchievements')?.addEventListener('click',loadAchievements);
 document.getElementById('loadNotifications')?.addEventListener('click',loadNotifications);
-\n// =============== CARD SOCIAL ===============
+
+// =============== CARD SOCIAL ===============
 async function socialRequest(path,options={}){
  if(!authToken)throw new Error('צריך להתחבר עם Google קודם');
  const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken,...(options.headers||{})}});
