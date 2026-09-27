@@ -452,7 +452,8 @@ html,body{color:var(--txt);background:radial-gradient(circle at 50% 0%,#17496b 0
 function adminCoinsUI(){return !!window.__divideIsAdmin;}
 function formatCoins(n){return adminCoinsUI()?'∞':String(Math.max(0,Math.floor(Number(n)||0)));}
 // Wrap common coin display/update points safely.
-\n
+
+
 // =============== LANGUAGE + VIDEO TUTORIAL ===============
 const LANG={
  he:{dir:'rtl',tabs:['משחק','חנות','הגדרות','פרופיל'],players:'מספר שחקנים (אתה + AI):',start:'התחל משחק',tutorial:'🎬 טוטוריאל',shop:'מטבעות',play:'הנח קלפים',noMove:'אין לי מהלך',menu:'תפריט ראשי',language:'שפה',rules:'כל שחקן מתחיל עם 5 קלפים. יש להניח קלף או שילוב שסכומו גדול/שווה ומתחלק ללא שארית בקלף הרלוונטי. A פותח את הדרישה, 2 משקף לקלף שמתחתיו.',games:{divide:'Divide',poker:'פוקר',yaniv:'יניב',war:'מלחמה',durak:'דורק'}},
@@ -494,7 +495,8 @@ document.getElementById('tutorialBtn')?.addEventListener('click',()=>openTutoria
 document.getElementById('tutorialClose')?.addEventListener('click',closeTutorial);
 document.getElementById('tutorialPlay')?.addEventListener('click',()=>{tutRunning=!tutRunning;document.getElementById('tutorialPlay').textContent=tutRunning?'⏸️':'▶️';renderTutorial()});
 document.getElementById('tutorialProgress')?.addEventListener('input',e=>{const frames=TUTORIALS[tutGame]||TUTORIALS.divide;tutIndex=Math.round((Number(e.target.value)/100)*(frames.length-1));tutRunning=false;document.getElementById('tutorialPlay').textContent='▶️';renderTutorial()});
-\n// =============== ARCADE CARD GAMES ===============
+
+// =============== ARCADE CARD GAMES ===============
 const GAME_STATE={type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',pokerStage:0,warCards:[],yanivScore:0,durakTrump:null};
 const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
 const SUITS=['♠','♥','♦','♣'], RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
