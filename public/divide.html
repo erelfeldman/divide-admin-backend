@@ -889,9 +889,14 @@ const Game={
   if(Deck.remaining()===0 && this.players.every(p=>p.hand.length===0)){
    this.phase='gameover'; await this.finishGame(); return;
   }
-  this.phase='playing';
-  toast(`${w.name} פותח/ת את הסבב הבא`);
+  // Only expose the next turn after the new-round banner is finished.
+  // Then render the controls again and explicitly resume the turn loop.
   await showBanner('מתחילים סבב חדש', 700);
+  if(myGen!==this.gen) return;
+  this.phase='playing';
+  this.selected=[];
+  UIRender();
+  this.loop();
  },
  async finishGame(){
   const scores=Game.computeScores();
@@ -941,14 +946,11 @@ function recoverUIError(err){
  console.error('Divide UI recovery:',err);
  try{
   document.querySelectorAll('#banner,#coinflip').forEach(x=>x.remove());
-  if(typeof Game!=='undefined'){
+  if(typeof Game!=='undefined' && Game.phase==='playing'){
    Game.busy=false;
-   if(Game.phase==='dealing'||Game.phase==='roundend') Game.phase='playing';
-   if(Game.phase==='playing'){
-    Game.selected=Array.isArray(Game.selected)?Game.selected:[];
-    UIRender();
-    setTimeout(()=>{try{Game.loop();}catch(e){console.error(e)}},0);
-   }
+   Game.selected=Array.isArray(Game.selected)?Game.selected:[];
+   UIRender();
+   setTimeout(()=>{try{Game.loop();}catch(e){console.error(e)}},0);
   }
  }catch(e){console.error('Divide recovery failed:',e);}
 }
@@ -959,6 +961,8 @@ window.addEventListener('unhandledrejection',e=>recoverUIError(e.reason));
 
 /* =============== NEW GAME / COIN FLIP =============== */
 async function startNewGame(numPlayers){
+ document.querySelectorAll('#banner,#coinflip').forEach(x=>x.remove());
+ document.getElementById('tutorialModal')?.classList.add('hidden');
  document.getElementById('arcade').style.display='none';
  document.getElementById('arcade').classList.add('hidden');
  Game.gen++; // invalidate any pending async work from a previous game
@@ -1112,8 +1116,16 @@ document.getElementById('noMoveBtn').onclick=()=>{
  if(Game.phase==='playing' && Game.currentPlayer===0){ Game.selected=[]; Game.exitPlayer(0); }
 };
 document.getElementById('newGameBtn').onclick=()=>{
- Game.gen++; Game.phase='idle';
+ Game.gen++;
+ Game.busy=false;
+ Game.phase='idle';
+ Game.selected=[];
+ document.querySelectorAll('#banner,#coinflip').forEach(x=>x.remove());
+ document.getElementById('tutorialModal')?.classList.add('hidden');
+ const arcade=document.getElementById('arcade');
+ if(arcade){arcade.style.display='none';arcade.classList.add('hidden');}
  document.getElementById('game').style.display='none';
+ document.getElementById('game').classList.add('hidden');
  document.getElementById('setup').style.display='flex';
  renderShop(); renderProfile();
 };
