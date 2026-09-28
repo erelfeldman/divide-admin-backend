@@ -619,14 +619,14 @@ function warFight(){
  if(GAME_STATE.hand.length===0||GAME_STATE.opponent.length===0){logArcade('🏆 המשחק הסתיים.');return;}
  const a=GAME_STATE.hand.pop(),b=GAME_STATE.opponent.pop();
  GAME_STATE.warCards=[a,b]; GAME_STATE.warWinner=null;
- if(a.v>b.v){GAME_STATE.hand.push(a,b);GAME_STATE.warWinner='player';logArcade('⚔️ '+a.r+' מנצח את '+b.r+' — הקלפים שלך!');}
- else if(b.v>a.v){GAME_STATE.opponent.push(a,b);GAME_STATE.warWinner='ai';logArcade('⚔️ '+b.r+' מנצח את '+a.r+' — הקלפים של היריב.');}
+ if(a.v>b.v){GAME_STATE.hand.unshift(a,b);GAME_STATE.warWinner='player';logArcade('⚔️ '+a.r+' מנצח את '+b.r+' — שני הקלפים נכנסו לתחתית הבנק שלך.');}
+ else if(b.v>a.v){GAME_STATE.opponent.unshift(a,b);GAME_STATE.warWinner='ai';logArcade('⚔️ '+b.r+' מנצח את '+a.r+' — שני הקלפים נכנסו לתחתית הבנק של היריב.');}
  else{
   const war=[a,b];let done=false;
   while(!done&&GAME_STATE.hand.length&&GAME_STATE.opponent.length){
    const x=GAME_STATE.hand.pop(),y=GAME_STATE.opponent.pop();war.push(x,y);
-   if(x.v>y.v){GAME_STATE.hand.push(...war);GAME_STATE.warWinner='player';done=true;}
-   else if(y.v>x.v){GAME_STATE.opponent.push(...war);GAME_STATE.warWinner='ai';done=true;}
+   if(x.v>y.v){GAME_STATE.hand.unshift(...war);GAME_STATE.warWinner='player';done=true;}
+   else if(y.v>x.v){GAME_STATE.opponent.unshift(...war);GAME_STATE.warWinner='ai';done=true;}
   }
   logArcade(done?(GAME_STATE.warWinner==='player'?'🔥 מלחמה! ניצחת ואספת את כל הקלפים.':'🔥 מלחמה! היריב ניצח ואסף את הקלפים.'):'🔥 מלחמה — אין מספיק קלפים להמשיך.');
  }
@@ -776,13 +776,13 @@ function durakTake(){
 function renderArcade(){
  const t=document.getElementById('arcadeTable'),a=document.getElementById('arcadeActions');if(!t||!a)return;
  if(GAME_STATE.type==='war'){
-  t.innerHTML='<div class="arcade-row"><div class="rankbox">הקלפים שלך: '+GAME_STATE.hand.length+'</div><div class="rankbox">קלפי היריב: '+GAME_STATE.opponent.length+'</div></div><div class="arcade-row" style="margin:35px 0">'+(GAME_STATE.warCards.map(x=>cardHTML(x)).join('')||'<div class="small">לחץ על ״קרב!״ כדי להפוך קלפים</div>')+'</div>';
+  t.innerHTML='<div class="arcade-row"><div class="rankbox">הבנק שלך: '+GAME_STATE.hand.length+' קלפים</div><div class="rankbox">הבנק של היריב: '+GAME_STATE.opponent.length+' קלפים</div></div><div class="arcade-row" style="margin:35px 0">'+(GAME_STATE.warCards.map(x=>cardHTML(x)).join('')||'<div class="small">לחץ על ״קרב!״ כדי להפוך קלפים</div>')+'</div>';
   a.innerHTML='<button id="warFight">⚔️ קרב!</button>';
   document.getElementById('warFight').onclick=warFight;return;
  }
  if(GAME_STATE.type==='poker'){
   const p=GAME_STATE.poker;
-  t.innerHTML='<div class="arcade-row"><div class="rankbox">הצ׳יפים שלך: '+p.playerChips+'</div><div class="rankbox">קופה: '+p.pot+'</div><div class="rankbox">צ׳יפים של היריב: '+p.aiChips+'</div></div>'+
+  t.innerHTML='<div class="arcade-row"><div class="rankbox">הצ׳יפים שלך: '+p.playerChips+'</div><div class="rankbox">קופה: '+p.pot+'</div><div class="rankbox">צ׳יפים של היריב: '+p.aiChips+'</div></div><div class="poker-ranks"><b>דירוגי ידיים — מהחזק לחלש:</b><br>1. רויאל פלאש<br>2. סטרייט פלאש<br>3. רביעייה<br>4. פול האוס<br>5. פלאש<br>6. סטרייט<br>7. שלישייה<br>8. שני זוגות<br>9. זוג<br>10. קלף גבוה</div>'+
    '<div class="small">בליינדים: 10 / 20 · '+(p.stage==='preflop'?'Pre-flop':p.stage==='flop'?'Flop':p.stage==='turn'?'Turn':'River')+'</div>'+
    '<div class="arcade-row" style="margin:15px 0"><div class="rankbox">קלפי היריב: 🂠 🂠</div></div>'+
    '<div class="arcade-row" style="margin:15px 0">'+(p.community.map(x=>cardHTML(x)).join('')||'<div class="small">הפלופ ייפתח אחרי ההשוואה הראשונה.</div>')+'</div>'+
@@ -1367,7 +1367,226 @@ function UIRender(){
   const playable = humanTurn && Rules.isValidSingle(c,rel);
   const el=cardEl(c, !!sel, (playable || (!!sel && humanTurn)) && !sel ? 'playable':'');
   if(sel){ const b=document.createElement('div'); b.className='badge'; b.textContent=G.selected.indexOf(sel)+1; el.appendChild(b); }
-  if(humanTurn) el.onclick=()=>{
+  
+   if(Game.busy) return;
+   const idx=G.selected.findIndex(x=>x.id===c.id);
+   if(idx>=0) G.selected.splice(idx,1); else G.selected.push(c);
+   UIRender();
+  };
+  hand.appendChild(el);
+ });
+ const playBtn=document.getElementById('playBtn');
+ playBtn.classList.toggle('hidden', !humanTurn);
+ playBtn.disabled = !(humanTurn && selectionValid);
+ const noMoveBtn=document.getElementById('noMoveBtn');
+ noMoveBtn.classList.toggle('hidden', !(humanTurn && !Rules.hasLegalMove(human.hand, rel)));
+}
+
+/* Reliable delegated click handler for the live hand.
+   The hand is rebuilt on every render, so handle clicks at the container level too. */
+document.getElementById('hand').addEventListener('click',e=>{
+ const el=e.target.closest('.card');
+ if(!el || !e.currentTarget.contains(el)) return;
+ if(Game.phase!=='playing' || Game.currentPlayer!==0 || !Game.players[0]?.active) return;
+ if(Game.busy) return;
+ const idCard=el.getAttribute('aria-label');
+ const c=Game.players[0].hand.find(x=>rankLabel(x.r)+' '+x.s===idCard);
+ if(!c) return;
+ const idx=Game.selected.findIndex(x=>x.id===c.id);
+ if(idx>=0) Game.selected.splice(idx,1); else Game.selected.push(c);
+ UIRender();
+},true);
+
+/* =============== EVENTS =============== */
+document.getElementById('playBtn').onclick=()=>{
+ const rel=Rules.getRelevantCard(Game.pile);
+ if(Game.phase==='playing' && Game.currentPlayer===0 && !Game.busy && Rules.isValidPlay(Game.selected,rel)){
+  Game.playCards(0,Game.selected.slice());
+ } else { Sound.error(); }
+};
+document.getElementById('noMoveBtn').onclick=()=>{
+ if(Game.phase==='playing' && Game.currentPlayer===0){ Game.selected=[]; Game.exitPlayer(0); }
+};
+document.getElementById('newGameBtn').onclick=()=>{
+ Game.gen++;
+ Game.busy=false;
+ Game.phase='idle';
+ Game.selected=[];
+ document.querySelectorAll('#banner,#coinflip').forEach(x=>x.remove());
+ document.getElementById('tutorialModal')?.classList.add('hidden');
+ const arcade=document.getElementById('arcade');
+ if(arcade){arcade.style.display='none';arcade.classList.add('hidden');}
+ document.getElementById('game').style.display='none';
+ document.getElementById('game').classList.add('hidden');
+ document.getElementById('setup').style.display='flex';
+ renderShop(); renderProfile();
+};
+
+let chosen=3;
+const pc=document.getElementById('pcount');
+[2,3,4].forEach(n=>{
+ const b=document.createElement('button'); b.textContent=n+' שחקנים'; if(n===chosen)b.classList.add('sel');
+ b.onclick=()=>{ chosen=n; [...pc.children].forEach(x=>x.classList.remove('sel')); b.classList.add('sel'); };
+ pc.appendChild(b);
+});
+document.getElementById('startBtn').onclick=()=>{if(currentSelectedGame==='divide')startNewGame(chosen);else setArcade(currentSelectedGame);};
+
+/* tabs */
+document.querySelectorAll('.tabbtn').forEach(btn=>{
+ btn.onclick=()=>{
+  document.querySelectorAll('.tabbtn').forEach(b=>b.classList.remove('active'));
+  btn.classList.add('active');
+  ['play','shop','settings','profile'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden', t!==btn.dataset.tab));
+ };
+});
+
+/* settings wiring */
+document.querySelectorAll('[data-mode]').forEach(b=>b.onclick=()=>{ Settings.data.mode=b.dataset.mode; Settings.apply(); });
+document.querySelectorAll('[data-q]').forEach(b=>b.onclick=()=>{ Settings.data.quality=b.dataset.q; persist(); });
+document.getElementById('soundOn').onchange=e=>{ Settings.data.sound=e.target.checked; persist(); };
+document.getElementById('musicOn').onchange=e=>{ Settings.data.music=e.target.checked; persist(); };
+document.getElementById('volFx').oninput=e=>{ Settings.data.volFx=parseFloat(e.target.value); persist(); };
+document.getElementById('largeText').onchange=e=>{ Settings.data.largeText=e.target.checked; Settings.apply(); };
+document.getElementById('highContrast').onchange=e=>{ Settings.data.highContrast=e.target.checked; Settings.apply(); };
+document.getElementById('reducedMotion').onchange=e=>{ Settings.data.reducedMotion=e.target.checked; Settings.apply(); };
+document.getElementById('resetSettings').onclick=()=>{
+ SAVEDATA.settings=defaultSave().settings; Settings.data=SAVEDATA.settings; Settings.apply(); toast('ההגדרות אופסו');
+};
+
+/* =============== GOOGLE AUTH / ADMIN =============== */
+function setAuthStatus(t){const e=document.getElementById('authStatus');if(e)e.textContent=t;}
+async function onGoogleCredential(response){
+ try{
+  authToken=response.credential;
+  const r=await fetch('/api/auth/sync',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken}});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'auth failed');
+  authUser=d.user;window.__divideIsAdmin=!!d.isAdmin;setAuthStatus('מחובר/ת כ-'+(d.user.name||d.user.email||'משתמש'));
+  document.getElementById('profileTitle').textContent=(d.user.name||d.user.email||'משתמש')+' 👤';
+  applyServerUser(d.user);
+  if(d.isAdmin)showAdminPanel(); applyLanguage(currentLang);
+  loadSocialFeed();
+  toast('התחברת בהצלחה');
+ }catch(e){authToken=null;setAuthStatus('ההתחברות נכשלה: '+e.message);console.error(e);}
+}
+async function initGoogleAuth(){
+ try{
+  const cfg=await fetch('/api/config').then(r=>r.json());
+  if(!cfg.googleClientId){setAuthStatus('Google Login עדיין לא מוגדר בשרת.');return;}
+  if(!window.google?.accounts?.id){setTimeout(initGoogleAuth,400);return;}
+  google.accounts.id.initialize({client_id:cfg.googleClientId,callback:onGoogleCredential,auto_select:false,cancel_on_tap_outside:true});
+  google.accounts.id.renderButton(document.getElementById('googleSignInBtn'),{theme:'outline',size:'large',text:'signin_with',shape:'rectangular',locale:'he'});
+ }catch(e){setAuthStatus('Google Login עדיין לא מוגדר בשרת.');}
+}
+function showAdminPanel(){document.getElementById('adminPanel')?.classList.remove('hidden');loadAdminUsers();}
+async function loadAdminUsers(){
+ try{
+  const r=await fetch('/api/admin/users',{headers:{Authorization:'Bearer '+authToken}}),d=await r.json();
+  if(!r.ok)throw new Error(d.error||'failed');
+  document.getElementById('adminStatus').textContent=d.users.length+' משתמשים רשומים';
+  const gift=document.getElementById('giftUser'); if(gift){gift.innerHTML='<option value="">בחר משתמש</option>';d.users.forEach(u=>{const o=document.createElement('option');o.value=u.google_sub;o.textContent=(u.name||u.email||'משתמש')+' — '+(u.email||'');gift.appendChild(o);});}
+  const box=document.getElementById('adminUsers');box.innerHTML='';
+  d.users.forEach(u=>{
+   const row=document.createElement('div');row.className='adminuser';
+   row.innerHTML='<span><b>'+String(u.name||'ללא שם').replace(/[<>&"]/g,'')+'</b><br><span class="small">'+String(u.email||'').replace(/[<>&"]/g,'')+' · 🪙 '+u.coins+'</span></span>';
+   const b=document.createElement('button');b.textContent='אפס מטבעות';b.onclick=()=>resetUserCoins(u.google_sub,u.name||u.email||'המשתמש');row.appendChild(b);box.appendChild(row);
+  });
+ }catch(e){document.getElementById('adminStatus').textContent='לא ניתן לטעון משתמשים: '+e.message;}
+}
+async function resetUserCoins(googleSub,name){
+ if(!confirm('לאפס ל-0 את המטבעות של '+name+'?'))return;
+ try{
+  const r=await fetch('/api/admin/reset-user-coins',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify({googleSub})});
+  const d=await r.json();if(!r.ok)throw new Error(d.error||'reset failed');toast('המטבעות אופסו');loadAdminUsers();
+ }catch(e){toast('איפוס נכשל: '+e.message);}
+}
+
+
+async function loadAchievements(){
+ const box=document.getElementById('achievementsBox');if(!box||!authToken)return;
+ try{const d=await socialRequest('/api/social/achievements');box.innerHTML='';d.achievements.forEach(a=>{const x=document.createElement('div');x.className='post';x.style.opacity=a.earned?'1':'.45';x.textContent=a.icon+' '+a.name+' — '+a.text+(a.earned?' ✓':' 🔒');box.appendChild(x);});}catch(e){box.textContent=e.message;}
+}
+async function loadNotifications(){
+ const box=document.getElementById('notificationsBox');if(!box||!authToken)return;
+ try{const d=await socialRequest('/api/social/notifications');box.innerHTML='';if(!d.notifications.length){box.textContent='אין התראות חדשות.';return;}d.notifications.forEach(n=>{const x=document.createElement('div');x.className='post';x.innerHTML='<b>'+safeText(n.type)+'</b> · '+safeText(n.text);x.onclick=async()=>{if(!n.read_at)await socialRequest('/api/social/notifications/'+n.id+'/read',{method:'POST',body:'{}'});x.style.opacity='.55';};box.appendChild(x);});}catch(e){box.textContent=e.message;}
+}
+document.getElementById('loadAchievements')?.addEventListener('click',loadAchievements);
+document.getElementById('loadNotifications')?.addEventListener('click',loadNotifications);
+
+// =============== CARD SOCIAL ===============
+async function socialRequest(path,options={}){
+ if(!authToken)throw new Error('צריך להתחבר עם Google קודם');
+ const r=await fetch(path,{...options,headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken,...(options.headers||{})}});
+ const d=await r.json();if(!r.ok)throw new Error(d.error||'הבקשה נכשלה');return d;
+}
+function safeText(v){return String(v??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));}
+
+async function loadLeaderboard(){
+ const box=document.getElementById('socialLeaderboard');if(!box||!authToken)return;
+ try{const d=await socialRequest('/api/social/leaderboard');box.innerHTML='';d.users.forEach((u,i)=>{const row=document.createElement('div');row.className='post';row.textContent=(i+1)+'. '+(u.name||u.email||'שחקן')+' · 🏆 '+u.wins+' · 🃏 '+u.collected;box.appendChild(row);});if(!d.users.length)box.textContent='אין עדיין נתונים.';}catch(e){box.textContent=e.message;}
+}
+document.getElementById('playerSearchForm')?.addEventListener('submit',async e=>{
+ e.preventDefault();const q=document.getElementById('playerSearchInput').value.trim(),box=document.getElementById('playerResults');
+ try{const d=await socialRequest('/api/social/players?q='+encodeURIComponent(q));box.innerHTML='';d.players.forEach(p=>{const row=document.createElement('div');row.className='post post-head';const label=document.createElement('span');label.textContent=(p.name||p.email||'שחקן')+' · '+p.wins+' ניצחונות';const b=document.createElement('button');b.textContent='עקוב';b.onclick=async()=>{try{const x=await socialRequest('/api/social/follow/'+encodeURIComponent(p.google_sub),{method:'POST',body:'{}'});b.textContent=x.following?'במעקב':'עקוב';}catch(err){toast(err.message);}};row.append(label,b);box.appendChild(row);});if(!d.players.length)box.textContent='לא נמצאו שחקנים.';}catch(err){box.textContent=err.message;}
+});
+
+async function loadSocialFeed(){
+ const box=document.getElementById('socialFeed');if(!box)return;
+ if(!authToken){box.innerHTML='<div class="small">התחבר לחשבון Google כדי לראות ולפרסם בפיד.</div>';return;}
+ try{
+  const d=await socialRequest('/api/social/feed');box.innerHTML='';
+  if(!d.posts.length){box.innerHTML='<div class="small">עוד אין פוסטים. אפשר להיות הראשון שמפרסם!</div>';return;}
+  d.posts.forEach(p=>{
+   const el=document.createElement('div');el.className='post';
+   const date=new Date(p.created_at).toLocaleString('he-IL',{dateStyle:'short',timeStyle:'short'});
+   el.innerHTML='<div class="post-head"><span><span class="avatar">'+safeText((p.name||p.email||'?').slice(0,1).toUpperCase())+'</span> <b>'+safeText(p.name||p.email||'שחקן')+'</b></span><span class="small">'+safeText(date)+'</span></div><div style="margin-top:10px;white-space:pre-wrap;overflow-wrap:anywhere">'+safeText(p.body)+'</div><div class="reaction-row"><button class="reaction like-btn">♥ '+Number(p.likes||0)+' לייקים</button><button class="reaction comment-btn">💬 '+Number(p.comments||0)+' תגובות</button></div><div class="comment-area" hidden style="margin-top:8px"><div class="comment-list small"></div><form class="comment-form" style="display:flex;gap:6px;margin-top:6px"><input maxlength="300" placeholder="כתוב תגובה..." style="flex:1;min-width:0;padding:9px;border-radius:10px;background:#07111f;color:#fff;border:1px solid #38546b"><button type="submit">שלח</button></form></div>';
+   el.querySelector('.like-btn').onclick=async()=>{try{const x=await socialRequest('/api/social/posts/'+p.id+'/like',{method:'POST',body:'{}'});el.querySelector('.like-btn').textContent='♥ '+x.likes+' לייקים';}catch(e){toast(e.message);}};
+   el.querySelector('.comment-btn').onclick=()=>{const a=el.querySelector('.comment-area');a.hidden=!a.hidden;if(!a.hidden)loadSocialComments(p.id,a.querySelector('.comment-list'));};
+   el.querySelector('.comment-form').onsubmit=async e=>{e.preventDefault();const input=e.currentTarget.querySelector('input');try{await socialRequest('/api/social/posts/'+p.id+'/comments',{method:'POST',body:JSON.stringify({body:input.value})});input.value='';loadSocialComments(p.id,el.querySelector('.comment-list'));}catch(err){toast(err.message);}};
+   box.appendChild(el);
+  });
+ }catch(e){box.innerHTML='<div class="small">לא ניתן לטעון את הפיד: '+safeText(e.message)+'</div>';}
+}
+async function loadSocialComments(postId,box){
+ try{const d=await socialRequest('/api/social/posts/'+postId+'/comments');box.innerHTML='';d.comments.forEach(c=>{const row=document.createElement('div');row.style.marginTop='6px';row.innerHTML='<b>'+safeText(c.name||c.email||'שחקן')+':</b> '+safeText(c.body);box.appendChild(row);});if(!d.comments.length)box.textContent='אין תגובות עדיין.';}catch(e){box.textContent=e.message;}
+}
+document.getElementById('socialPostForm')?.addEventListener('submit',async e=>{
+ e.preventDefault();const input=document.getElementById('socialPostInput');
+ try{await socialRequest('/api/social/posts',{method:'POST',body:JSON.stringify({body:input.value})});input.value='';loadSocialFeed();toast('הפוסט פורסם!');}
+ catch(err){toast(err.message);}
+});
+
+initGoogleAuth();
+
+/* init */
+Shop.equipTheme(SAVEDATA.equipped);
+Settings.apply();
+renderShop();
+renderProfile();
+applyLanguage(currentLang);
+
+// Admin gift controls are wired inside the page script so they are available
+// immediately after the DOM is parsed and always use the current auth token.
+document.getElementById('giftSend')?.addEventListener('click',async()=>{
+ const googleSub=document.getElementById('giftUser')?.value;
+ const coins=Number(document.getElementById('giftCoins')?.value||0);
+ const theme=document.getElementById('giftTheme')?.value||'';
+ const out=document.getElementById('giftStatus');
+ if(!out)return;
+ if(!googleSub){out.textContent='בחר משתמש';return;}
+ if(!coins&&!theme){out.textContent='בחר מתנה';return;}
+ try{
+  const r=await fetch('/api/admin/gift',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify({googleSub,coins,theme})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'failed');
+  out.textContent='נשלח בהצלחה 🎁';
+  document.getElementById('giftCoins').value=0;
+  document.getElementById('giftTheme').value='';
+  await loadAdminUsers();
+ }catch(e){out.textContent='השליחה נכשלה: '+e.message;}
+});
+</script>
+<script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script></body>
+</html>
    if(Game.busy) return;
    const idx=G.selected.findIndex(x=>x.id===c.id);
    if(idx>=0) G.selected.splice(idx,1); else G.selected.push(c);
