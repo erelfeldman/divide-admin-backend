@@ -789,38 +789,72 @@ const Game={
    if(p.isAI){ await this.exitPlayer(pIdx); }
    return;
   }
+
   this.busy=true;
-  this.selected=[];
-  for(const c of cards){
-   const idx=p.hand.findIndex(h=>h.id===c.id);
-   if(idx<0){ this.busy=false; UIRender(); return; }
-   p.hand.splice(idx,1); this.pile.push(c);
+  try{
+   this.selected=[];
+   for(const c of cards){
+    const idx=p.hand.findIndex(h=>h.id===c.id);
+    if(idx<0) throw new Error('Card disappeared from hand');
+    p.hand.splice(idx,1);
+    this.pile.push(c);
+   }
+   UIRender();
+   if(cards.length>1) toast(`${p.name} הניחו/ה שילוב: ${cards.map(c=>rankLabel(c.r)).join(' + ')}`);
+   else toast(`${p.name} הניח/ה ${rankLabel(cards[0].r)}${cards[0].s}`);
+   Sound.play();
+   const played=cards[cards.length-1];
+   if(played.r===14) toast('אס! הדרישה אופסה — מהלך פתוח');
+   else if(played.r===2 && relBefore.t!=='free') toast(`2 משקף — עדיין מתייחסים ל-${relBefore.v}`);
+
+   await sleep(250);
+
+   if(this.activeCount()===1){
+    this.busy=false;
+    await this.endRound(pIdx);
+   }else{
+    this.busy=false;
+    this.currentPlayer=this.nextActivePlayer(pIdx);
+    UIRender();
+    this.loop();
+   }
+  }catch(err){
+   console.error('Divide playCards error:',err);
+   this.busy=false;
+   toast('אירעה תקלה במהלך המהלך — המשחק ממשיך');
+   UIRender();
+   if(this.phase==='playing') this.loop();
   }
-  UIRender();
-  if(cards.length>1) toast(`${p.name} הניחו/ה שילוב: ${cards.map(c=>rankLabel(c.r)).join(' + ')}`);
-  else toast(`${p.name} הניח/ה ${rankLabel(cards[0].r)}${cards[0].s}`);
-  Sound.play();
-  const played=cards[cards.length-1];
-  if(played.r===14) toast('אס! הדרישה אופסה — מהלך פתוח');
-  else if(played.r===2 && relBefore.t!=='free') toast(`2 משקף — עדיין מתייחסים ל-${relBefore.v}`);
-  await sleep(250);
-  this.busy=false;
-  if(this.activeCount()===1){ await this.endRound(pIdx); }
-  else { this.currentPlayer=this.nextActivePlayer(pIdx); UIRender(); }
-  this.loop();
  },
 
  async exitPlayer(pIdx){
-  if(this.busy) return; this.busy=true;
-  this.players[pIdx].active=false;
-  toast(`${this.players[pIdx].name} יצא/ה מהסבב (אין מהלך חוקי)`);
-  UIRender();
-  await sleep(400);
-  this.busy=false;
-  if(this.activeCount()===1){ const w=this.players.findIndex(p=>p.active); await this.endRound(w); }
-  else { this.currentPlayer=this.nextActivePlayer(pIdx); UIRender(); }
-  this.loop();
+  if(this.busy || this.phase!=='playing') return;
+  this.busy=true;
+  try{
+   this.players[pIdx].active=false;
+   toast(`${this.players[pIdx].name} יצא/ה מהסבב (אין מהלך חוקי)`);
+   UIRender();
+   await sleep(400);
+
+   if(this.activeCount()===1){
+    const w=this.players.findIndex(p=>p.active);
+    this.busy=false;
+    await this.endRound(w);
+   }else{
+    this.busy=false;
+    this.currentPlayer=this.nextActivePlayer(pIdx);
+    UIRender();
+    this.loop();
+   }
+  }catch(err){
+   console.error('Divide exitPlayer error:',err);
+   this.busy=false;
+   toast('אירעה תקלה במעבר תור — המשחק ממשיך');
+   UIRender();
+   if(this.phase==='playing') this.loop();
+  }
  },
+
  async endRound(winnerIdx){
   const myGen=this.gen;
   this.phase='roundend';
