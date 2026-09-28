@@ -527,6 +527,22 @@ function warFight(){if(!GAME_STATE.hand.length||!GAME_STATE.opponent.length){log
 document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=>{setArcade(b.dataset.game);}));
 document.getElementById('arcadeExit')?.addEventListener('click',()=>{document.getElementById('arcade').style.display='none';});
 
+/* ===== CARD FRONT SKINS ===== */
+.card[data-card-theme]{isolation:isolate}
+.card[data-card-theme] .card-art{position:absolute;inset:0;z-index:-1;opacity:.18;pointer-events:none}
+.card[data-card-theme="classic"]{background:linear-gradient(145deg,#fffefa,#f4f0e6)}
+.card[data-card-theme="dark"]{background:radial-gradient(circle at 50% 35%,#4a4a4a,#111 70%);color:#f4f4f4;border-color:#777}
+.card[data-card-theme="fire"]{background:radial-gradient(circle at 50% 75%,#ffcf66 0,#e85d20 28%,#7e1010 72%,#250607 100%);color:#fff7e0;border-color:#ffb43d}
+.card[data-card-theme="ice"]{background:radial-gradient(circle at 30% 20%,#fff,#bdefff 35%,#4ca5d8 75%,#16456b);color:#06253b;border-color:#d9f8ff}
+.card[data-card-theme="galaxy"]{background:radial-gradient(circle at 30% 25%,#fff 0 1px,transparent 2px),radial-gradient(circle at 75% 65%,#fff 0 1px,transparent 2px),radial-gradient(circle at 50% 50%,#8d5cff,#24105f 55%,#09031d);background-size:42px 37px,53px 47px,auto;color:#fff;border-color:#b994ff}
+.card[data-card-theme="neon"]{background:linear-gradient(135deg,#101018,#24102b 45%,#071d25);color:#fff;border-color:#58f7ff;box-shadow:0 8px 18px rgba(0,0,0,.34),0 0 18px rgba(0,229,255,.22)}
+.card[data-card-theme="fire"] .card-art{opacity:.28}
+.card[data-card-theme="ice"] .card-art{opacity:.25}
+.card[data-card-theme="galaxy"] .card-art{opacity:.35}
+.card[data-card-theme="neon"] .card-art{opacity:.3}
+.theme-rarity{font-size:.72em;font-weight:900;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+.theme-preview-card{width:76px;height:108px;border-radius:12px;margin:0 auto 10px;display:flex;flex-direction:column;justify-content:space-between;padding:7px 8px;font-weight:900;box-shadow:0 8px 18px rgba(0,0,0,.3);text-align:left}
+
 /* =============== SOUND (procedural, no external assets) =============== */
 const Sound=(()=>{
  let ctx=null;
@@ -594,12 +610,12 @@ async function saveToServer(){
 }
 
 const THEMES=[
- {id:'classic',name:'Classic',price:0,backA:'#1b3a63',backB:'#0e2038'},
- {id:'dark',name:'Dark',price:50,backA:'#2b2b2b',backB:'#050505'},
- {id:'fire',name:'Fire',price:80,backA:'#ff7b39',backB:'#8a0e0e'},
- {id:'ice',name:'Ice',price:80,backA:'#bfe9ff',backB:'#1c6fa3'},
- {id:'galaxy',name:'Galaxy',price:120,backA:'#7b2ff7',backB:'#0d0221'},
- {id:'neon',name:'Neon',price:120,backA:'#ff2fd0',backB:'#00e5ff'},
+ {id:'classic',name:'Classic',rarity:'Common',price:0,backA:'#1b3a63',backB:'#0e2038',symbol:'♠'},
+ {id:'dark',name:'Dark',rarity:'Uncommon',price:50,backA:'#2b2b2b',backB:'#050505',symbol:'☾'},
+ {id:'fire',name:'Fire',rarity:'Rare',price:80,backA:'#ff7b39',backB:'#8a0e0e',symbol:'🔥'},
+ {id:'ice',name:'Ice',rarity:'Rare',price:80,backA:'#bfe9ff',backB:'#1c6fa3',symbol:'❄'},
+ {id:'galaxy',name:'Galaxy',rarity:'Epic',price:120,backA:'#7b2ff7',backB:'#0d0221',symbol:'✦'},
+ {id:'neon',name:'Neon',rarity:'Legendary',price:120,backA:'#ff2fd0',backB:'#00e5ff',symbol:'⚡'},
 ];
 const Settings={
  data:SAVEDATA.settings,
@@ -642,8 +658,11 @@ function renderShop(){
   const owned=SAVEDATA.ownedThemes.includes(t.id);
   const equipped=SAVEDATA.equipped===t.id;
   const d=document.createElement('div'); d.className='themecard';
-  d.innerHTML=`<div class="swatch" style="background:linear-gradient(135deg,${t.backA},${t.backB})"></div>
-   <div><b>${t.name}</b></div><div class="small">${t.price===0?'חינם':t.price+' 🪙'}</div>`;
+  const preview=document.createElement('div'); preview.className='theme-preview-card'; preview.dataset.cardTheme=t.id;
+  preview.innerHTML='<div>K</div><div style="text-align:center;font-size:2.4em">'+t.symbol+'</div><div style="text-align:left;transform:rotate(180deg)">K</div>';
+  const rarity=document.createElement('div'); rarity.className='theme-rarity'; rarity.textContent=t.rarity;
+  const info=document.createElement('div'); info.innerHTML='<b>'+t.name+'</b><div class="small">'+(t.price===0?'חינם':t.price+' 🪙')+'</div>';
+  d.append(preview,rarity,info);
   const btn=document.createElement('button');
   if(equipped){ btn.textContent='מצויד ✓'; btn.disabled=true; }
   else if(owned){ btn.textContent='צייד'; btn.onclick=()=>Shop.equipTheme(t.id); }
@@ -761,7 +780,7 @@ const Game={
  activeCount(){ return this.players.filter(p=>p.active).length; },
 
  async playCards(pIdx,cards){
-  if(this.busy) return;
+  if(this.busy || this.phase!=='playing' || this.currentPlayer!==pIdx) return;
   const p=this.players[pIdx];
   const relBefore=Rules.getRelevantCard(this.pile);
   const validIds=Array.isArray(cards)&&cards.length>0&&cards.every(c=>p.hand.some(h=>h.id===c.id));
@@ -771,7 +790,12 @@ const Game={
    return;
   }
   this.busy=true;
-  for(const c of cards){ const idx=p.hand.findIndex(h=>h.id===c.id); p.hand.splice(idx,1); this.pile.push(c); }
+  this.selected=[];
+  for(const c of cards){
+   const idx=p.hand.findIndex(h=>h.id===c.id);
+   if(idx<0){ this.busy=false; UIRender(); return; }
+   p.hand.splice(idx,1); this.pile.push(c);
+  }
   UIRender();
   if(cards.length>1) toast(`${p.name} הניחו/ה שילוב: ${cards.map(c=>rankLabel(c.r)).join(' + ')}`);
   else toast(`${p.name} הניח/ה ${rankLabel(cards[0].r)}${cards[0].s}`);
@@ -954,8 +978,15 @@ async function animatePileToCollected(winnerIdx){
 /* =============== RENDER / UI =============== */
 function cardEl(c,selected,extraClass){
  const el=document.createElement('div');
+ const themeId=SAVEDATA?.equipped||'classic';
+ const theme=THEMES.find(t=>t.id===themeId)||THEMES[0];
  el.className='card'+(('♥♦'.includes(c.s))?' red':'')+(selected?' selected':'')+(extraClass?(' '+extraClass):'');
- el.innerHTML=`<div>${rankLabel(c.r)}</div><div style="text-align:center;font-size:1.3em">${c.s}</div><div style="text-align:left;transform:rotate(180deg)">${rankLabel(c.r)}</div>`;
+ el.dataset.cardTheme=theme.id;
+ el.setAttribute('aria-label',rankLabel(c.r)+' '+c.s);
+ el.innerHTML=`<div style="position:relative;z-index:2">${rankLabel(c.r)}</div>
+   <div class="card-art" aria-hidden="true" style="display:grid;place-items:center;font-size:3.2em">${theme.symbol||'♠'}</div>
+   <div style="position:relative;z-index:2;text-align:center;font-size:1.3em">${c.s}</div>
+   <div style="position:relative;z-index:2;text-align:left;transform:rotate(180deg)">${rankLabel(c.r)}</div>`;
  return el;
 }
 function UIRender(){
@@ -993,6 +1024,7 @@ function UIRender(){
   const el=cardEl(c, !!sel, playable && !sel ? 'playable':'');
   if(sel){ const b=document.createElement('div'); b.className='badge'; b.textContent=G.selected.indexOf(sel)+1; el.appendChild(b); }
   if(humanTurn) el.onclick=()=>{
+   if(Game.busy) return;
    const idx=G.selected.findIndex(x=>x.id===c.id);
    if(idx>=0) G.selected.splice(idx,1); else G.selected.push(c);
    UIRender();
@@ -1001,7 +1033,7 @@ function UIRender(){
  });
  const playBtn=document.getElementById('playBtn');
  playBtn.classList.toggle('hidden', !humanTurn);
- playBtn.disabled = !(humanTurn && Rules.isValidPlay(G.selected, rel));
+ playBtn.disabled = !(humanTurn && selectionValid);
  const noMoveBtn=document.getElementById('noMoveBtn');
  noMoveBtn.classList.toggle('hidden', !(humanTurn && !Rules.hasLegalMove(human.hand, rel)));
 }
@@ -1009,9 +1041,8 @@ function UIRender(){
 /* =============== EVENTS =============== */
 document.getElementById('playBtn').onclick=()=>{
  const rel=Rules.getRelevantCard(Game.pile);
- if(Game.phase==='playing' && Game.currentPlayer===0 && Rules.isValidPlay(Game.selected,rel)){
-  const cards=Game.selected.slice(); Game.selected=[];
-  Game.playCards(0,cards);
+ if(Game.phase==='playing' && Game.currentPlayer===0 && !Game.busy && Rules.isValidPlay(Game.selected,rel)){
+  Game.playCards(0,Game.selected.slice());
  } else { Sound.error(); }
 };
 document.getElementById('noMoveBtn').onclick=()=>{
