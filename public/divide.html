@@ -537,41 +537,308 @@ document.getElementById('tutorialPlay')?.addEventListener('click',()=>{tutRunnin
 document.getElementById('tutorialProgress')?.addEventListener('input',e=>{const frames=TUTORIALS[tutGame]||TUTORIALS.divide;tutIndex=Math.round((Number(e.target.value)/100)*(frames.length-1));tutRunning=false;document.getElementById('tutorialPlay').textContent='▶️';renderTutorial()});
 
 // =============== ARCADE CARD GAMES ===============
-const GAME_STATE={type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',pokerStage:0,warCards:[],yanivScore:0,durakTrump:null};
-const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
+const GAME_STATE={
+ type:'divide',hand:[],opponent:[],deck:[],selected:[],turn:'player',
+ warCards:[],warWinner:null,yanivScore:0,yanivRound:1,yanivLastDraw:null,
+ poker:{stage:'preflop',pot:30,playerChips:990,aiChips:990,playerBet:0,aiBet:0,
+        playerHole:[],aiHole:[],community:[],current:'player',highestBet:20,folded:false},
+ durak:{trump:null,phase:'attack',attack:[],defense:{},attacker:'player',defender:'ai',message:''}
+};
+const GAMES={divide:{title:'Divide',players:4},poker:{title:'פוקר — Texas Hold’em',players:2},yaniv:{title:'יניב',players:2},war:{title:'מלחמה',players:2},durak:{title:'דורק',players:2}};
 const ARCADE_SUITS=['♠','♥','♦','♣'], ARCADE_RANKS=['A','2','3','4','5','6','7','8','9','10','J','Q','K'];
 function makeDeck(){const d=[];for(const s of ARCADE_SUITS)for(const r of ARCADE_RANKS)d.push({s,r,v:ARCADE_RANKS.indexOf(r)+1});return d.sort(()=>Math.random()-.5);}
 function cardHTML(c,cls=''){const red=c.s==='♥'||c.s==='♦';return '<div class="arcade-card '+(red?'red ':'')+cls+'"><span>'+c.r+'</span><span style="font-size:1.6em;text-align:center">'+c.s+'</span><span style="text-align:right">'+c.r+'</span></div>'}
-function setArcade(type){currentSelectedGame=type;GAME_STATE.type=type;document.querySelectorAll('.gamepick').forEach(b=>b.classList.toggle('active',b.dataset.game===type));document.getElementById('arcadeTitle').textContent=GAMES[type].title;document.getElementById('arcade').style.display='flex';startArcade(type);}
-function logArcade(t){document.getElementById('arcadeLog').textContent=t;}
-function renderArcade(){const t=document.getElementById('arcadeTable');const a=document.getElementById('arcadeActions');if(!t)return;
- if(GAME_STATE.type==='war'){t.innerHTML='<div class="rankbox">הקלפים של היריב: '+GAME_STATE.opponent.length+'</div><div class="arcade-row" style="margin:35px 0">'+(GAME_STATE.warCards.map(x=>cardHTML(x)).join('')||'<div class="small">לחץ על ״קרב״</div>')+'</div><div class="rankbox">הקלפים שלך: '+GAME_STATE.hand.length+'</div>';a.innerHTML='<button id="warFight">⚔️ קרב!</button>';return;}
- t.innerHTML='<div class="arcade-row"><div class="rankbox">יריב: '+GAME_STATE.opponent.length+' קלפים</div></div><div class="arcade-row" style="margin:24px 0"><div class="rankbox">'+(GAME_STATE.durakTrump?'שליט: '+GAME_STATE.durakTrump:'')+'</div></div><div class="arcade-hand">'+GAME_STATE.hand.map((x,i)=>cardHTML(x,GAME_STATE.selected.includes(i)?'selected':'' ).replace('class="arcade-card','data-i="'+i+'" class="arcade-card')).join('')+'</div>';
- a.innerHTML=GAME_STATE.type==='poker'?'<button id="pokerDeal">חלק מחדש</button><button id="pokerCall">השווה</button><button id="pokerFold" class="ghost">פרוש</button>':GAME_STATE.type==='yaniv'?'<button id="yanivDiscard">זרוק נבחרים</button><button id="yanivCall">📣 יניב!</button>':GAME_STATE.type==='durak'?'<button id="durakAttack">⚔️ תקוף</button><button id="durakDefend">🛡️ הגן</button>':'<button id="genericDraw">משוך קלף</button>';
- t.querySelectorAll('.arcade-card[data-i]').forEach(el=>el.onclick=()=>{const i=Number(el.dataset.i);const p=GAME_STATE.selected.indexOf(i);if(p>=0)GAME_STATE.selected.splice(p,1);else GAME_STATE.selected.push(i);renderArcade();});
- if(GAME_STATE.type==='poker'){document.getElementById('pokerDeal').onclick=()=>startArcade('poker');document.getElementById('pokerCall').onclick=()=>{logArcade('השוואת הימור — היד שלך נבדקת.');};document.getElementById('pokerFold').onclick=()=>{logArcade('פרשת מהיד.');};}
- if(GAME_STATE.type==='yaniv'){document.getElementById('yanivDiscard').onclick=()=>{if(!GAME_STATE.selected.length)return logArcade('בחר קלפים לזריקה.');GAME_STATE.hand=GAME_STATE.hand.filter((_,i)=>!GAME_STATE.selected.includes(i));GAME_STATE.selected=[];GAME_STATE.hand.push(GAME_STATE.deck.pop());logArcade('זרקת קלפים וקיבלת קלף חדש.');renderArcade();};document.getElementById('yanivCall').onclick=()=>{logArcade('📣 יניב! נבדק אם הסכום נמוך מספיק.');};}
- if(GAME_STATE.type==='durak'){document.getElementById('durakAttack').onclick=()=>logArcade('התקפה בוצעה — בחר קלף נוסף.');document.getElementById('durakDefend').onclick=()=>logArcade('ניסיון הגנה בוצע.');}
- if(GAME_STATE.type==='war')document.getElementById('warFight').onclick=warFight;
+function setArcade(type){
+ currentSelectedGame=type;
+ document.querySelectorAll('.gamepick').forEach(b=>b.classList.toggle('active',b.dataset.game===type));
+ document.getElementById('arcadeTitle').textContent=GAMES[type].title;
+ document.getElementById('arcade').classList.remove('hidden');
+ document.getElementById('arcade').style.display='flex';
+ startArcade(type);
 }
-function startArcade(type){GAME_STATE.type=type;GAME_STATE.deck=makeDeck();GAME_STATE.hand=[];GAME_STATE.opponent=[];GAME_STATE.selected=[];GAME_STATE.warCards=[];GAME_STATE.durakTrump=null;
- const n=type==='poker'?5:type==='yaniv'?5:type==='war'?26:6;for(let i=0;i<n;i++){GAME_STATE.hand.push(GAME_STATE.deck.pop());GAME_STATE.opponent.push(GAME_STATE.deck.pop());}
- if(type==='durak')GAME_STATE.durakTrump=GAME_STATE.deck[0]?.s;
- document.getElementById('arcadeStatus').textContent='משחק מול AI • גרסת בטא'+(adminCoinsUI()?' • 👑 מטבעות ללא הגבלה':'');logArcade('המשחק התחיל. בחר מהלך.');renderArcade();}
-function warFight(){if(!GAME_STATE.hand.length||!GAME_STATE.opponent.length){logArcade('המשחק הסתיים!');return;}const a=GAME_STATE.hand.pop(),b=GAME_STATE.opponent.pop();GAME_STATE.warCards=[a,b];if(a.v>=b.v){GAME_STATE.hand.push(a,b);logArcade('ניצחת בקרב! הקלפים שלך.');}else{GAME_STATE.opponent.push(a,b);logArcade('היריב ניצח בקרב.');}renderArcade();}
+function logArcade(t){const e=document.getElementById('arcadeLog');if(e)e.innerHTML=t;}
+function sortCards(cards){return [...cards].sort((a,b)=>a.v-b.v||ARCADE_SUITS.indexOf(a.s)-ARCADE_SUITS.indexOf(b.s));}
+
+/* ---------- YANIV ---------- */
+function yanivValue(c){return c.r==='A'?1:['J','Q','K'].includes(c.r)?10:c.v;}
+function yanivSum(hand){return hand.reduce((s,c)=>s+yanivValue(c),0);}
+function yanivValid(cards){
+ if(!cards.length)return false;
+ if(cards.length===1)return true;
+ if(cards.every(c=>c.r===cards[0].r))return true;
+ const sameSuit=cards.every(c=>c.s===cards[0].s);
+ if(sameSuit){
+  const vals=sortCards(cards).map(c=>c.r==='A'?1:c.v);
+  for(let i=1;i<vals.length;i++)if(vals[i]!==vals[i-1]+1)return false;
+  return true;
+ }
+ return false;
+}
+function yanivCanDiscard(){return GAME_STATE.selected.length>0&&yanivValid(GAME_STATE.selected.map(i=>GAME_STATE.hand[i]));}
+function yanivCall(){
+ const score=yanivSum(GAME_STATE.hand);
+ if(score>7){logArcade('❌ אי אפשר לקרוא יניב: סכום היד הוא '+score+'. צריך 7 או פחות.');return;}
+ const aiScore=yanivSum(GAME_STATE.opponent);
+ logArcade('📣 יניב! אתה על '+score+' נקודות.');
+ setTimeout(()=>{
+  if(aiScore<=score){
+   logArcade('היריב הכריז אסף! היריב היה על '+aiScore+' נקודות. היד שלך מקבלת קנס.');
+   GAME_STATE.yanivScore+=score+30;
+  }else{
+   logArcade('🎉 יניב הצליח! היריב על '+aiScore+' נקודות. הסבב שלך.');
+   GAME_STATE.yanivScore+=score;
+  }
+  setTimeout(()=>startArcade('yaniv'),1100);
+ },700);
+}
+function yanivDiscard(){
+ if(!yanivCanDiscard()){logArcade('❌ אי אפשר לזרוק את הקלפים שבחרת. מותר: קלף יחיד, זוג/שלישייה/רביעייה מאותו ערך, או רצף של לפחות 2 מאותה סדרה.');return;}
+ const chosen=GAME_STATE.selected.map(i=>GAME_STATE.hand[i]);
+ GAME_STATE.hand=GAME_STATE.hand.filter((_,i)=>!GAME_STATE.selected.includes(i));
+ GAME_STATE.selected=[];
+ const drawn=GAME_STATE.deck.pop();
+ if(drawn)GAME_STATE.hand.push(drawn);
+ GAME_STATE.opponent=sortCards(GAME_STATE.opponent);
+ // Simple legal AI discard: prefer a valid set/sequence, otherwise one card.
+ let aiPick=[0];
+ const groups=[];
+ for(let i=0;i<GAME_STATE.opponent.length;i++)for(let j=i+1;j<GAME_STATE.opponent.length;j++){
+  const g=[GAME_STATE.opponent[i],GAME_STATE.opponent[j]];
+  if(yanivValid(g))groups.push(g);
+ }
+ if(groups.length)aiPick=groups[0].map(c=>GAME_STATE.opponent.indexOf(c));
+ GAME_STATE.opponent=GAME_STATE.opponent.filter((_,i)=>!aiPick.includes(i));
+ const aiDraw=GAME_STATE.deck.pop();if(aiDraw)GAME_STATE.opponent.push(aiDraw);
+ GAME_STATE.yanivLastDraw=drawn;
+ logArcade('זרקת '+chosen.length+' קלפים חוקיים וקיבלת קלף חדש. הניקוד שלך: '+yanivSum(GAME_STATE.hand)+'.');
+ renderArcade();
+}
+
+/* ---------- WAR ---------- */
+function warFight(){
+ if(GAME_STATE.hand.length===0||GAME_STATE.opponent.length===0){logArcade('🏆 המשחק הסתיים.');return;}
+ const a=GAME_STATE.hand.pop(),b=GAME_STATE.opponent.pop();
+ GAME_STATE.warCards=[a,b]; GAME_STATE.warWinner=null;
+ if(a.v>b.v){GAME_STATE.hand.push(a,b);GAME_STATE.warWinner='player';logArcade('⚔️ '+a.r+' מנצח את '+b.r+' — הקלפים שלך!');}
+ else if(b.v>a.v){GAME_STATE.opponent.push(a,b);GAME_STATE.warWinner='ai';logArcade('⚔️ '+b.r+' מנצח את '+a.r+' — הקלפים של היריב.');}
+ else{
+  const war=[a,b];let done=false;
+  while(!done&&GAME_STATE.hand.length&&GAME_STATE.opponent.length){
+   const x=GAME_STATE.hand.pop(),y=GAME_STATE.opponent.pop();war.push(x,y);
+   if(x.v>y.v){GAME_STATE.hand.push(...war);GAME_STATE.warWinner='player';done=true;}
+   else if(y.v>x.v){GAME_STATE.opponent.push(...war);GAME_STATE.warWinner='ai';done=true;}
+  }
+  logArcade(done?(GAME_STATE.warWinner==='player'?'🔥 מלחמה! ניצחת ואספת את כל הקלפים.':'🔥 מלחמה! היריב ניצח ואסף את הקלפים.'):'🔥 מלחמה — אין מספיק קלפים להמשיך.');
+ }
+ renderArcade();
+}
+
+/* ---------- TEXAS HOLD'EM ---------- */
+function pokerReset(){
+ const p=GAME_STATE.poker;
+ p.stage='preflop';p.pot=30;p.playerChips=990;p.aiChips=990;p.playerBet=20;p.aiBet=20;
+ p.playerHole=[];p.aiHole=[];p.community=[];p.current='player';p.highestBet=20;p.folded=false;
+ GAME_STATE.deck=makeDeck();
+ // blinds: player is small blind, AI is big blind
+ p.playerHole=[GAME_STATE.deck.pop(),GAME_STATE.deck.pop()];
+ p.aiHole=[GAME_STATE.deck.pop(),GAME_STATE.deck.pop()];
+ logArcade('Texas Hold’em: סמול בליינד 10, ביג בליינד 20. התור שלך.');
+}
+function pokerRank5(cards){
+ const vals=cards.map(c=>c.r==='A'?14:c.v).sort((a,b)=>b-a);
+ const counts={};vals.forEach(v=>counts[v]=(counts[v]||0)+1);
+ const groups=Object.entries(counts).map(([v,n])=>({v:+v,n})).sort((a,b)=>b.n-a.n||b.v-a.v);
+ const uniq=[...new Set(vals)].sort((a,b)=>b-a);
+ if(uniq.includes(14))uniq.push(1);
+ let straightHigh=null;
+ for(let i=0;i<=uniq.length-5;i++){if(uniq[i]-uniq[i+4]===4){straightHigh=uniq[i];break;}}
+ const flush=cards.every(c=>c.s===cards[0].s);
+ if(flush&&straightHigh)return [8,straightHigh];
+ if(groups[0].n===4)return [7,groups[0].v,...groups.filter(g=>g.n!==4).map(g=>g.v)];
+ if(groups[0].n===3&&groups.some(g=>g.n>=2&&g.v!==groups[0].v))return [6,groups[0].v,groups.find(g=>g.n>=2&&g.v!==groups[0].v).v];
+ if(flush)return [5,...vals];
+ if(straightHigh)return [4,straightHigh];
+ if(groups[0].n===3)return [3,groups[0].v,...groups.filter(g=>g.n===1).map(g=>g.v).sort((a,b)=>b-a)];
+ const pairs=groups.filter(g=>g.n===2).map(g=>g.v).sort((a,b)=>b-a);
+ if(pairs.length>=2)return [2,pairs[0],pairs[1],...groups.filter(g=>g.n===1).map(g=>g.v)];
+ if(pairs.length===1)return [1,pairs[0],...groups.filter(g=>g.n===1).map(g=>g.v).sort((a,b)=>b-a)];
+ return [0,...vals];
+}
+function pokerBest7(cards){
+ let best=null;
+ for(let a=0;a<cards.length-4;a++)for(let b=a+1;b<cards.length-3;b++)for(let d=b+1;d<cards.length-2;d++)for(let e=d+1;e<cards.length-1;e++)for(let f=e+1;f<cards.length;f++){
+  const r=pokerRank5([cards[a],cards[b],cards[d],cards[e],cards[f]]);
+  if(!best||pokerCompare(r,best)>0)best=r;
+ }
+ return best;
+}
+function pokerCompare(a,b){for(let i=0;i<Math.max(a.length,b.length);i++){const x=a[i]||0,y=b[i]||0;if(x!==y)return x-y;}return 0;}
+function pokerName(r){return ['קלף גבוה','זוג','שני זוגות','שלישייה','סטרייט','פלאש','פול האוס','רביעייה','סטרייט פלאש'][r?.[0]]||'יד';}
+function pokerRevealStage(){
+ const p=GAME_STATE.poker;
+ if(p.stage==='preflop'){p.community.push(GAME_STATE.deck.pop(),GAME_STATE.deck.pop(),GAME_STATE.deck.pop());p.stage='flop';}
+ else if(p.stage==='flop'){p.community.push(GAME_STATE.deck.pop());p.stage='turn';}
+ else if(p.stage==='turn'){p.community.push(GAME_STATE.deck.pop());p.stage='river';}
+}
+function pokerFinish(){
+ const p=GAME_STATE.poker;
+ const pr=pokerBest7([...p.playerHole,...p.community]), ar=pokerBest7([...p.aiHole,...p.community]);
+ const cmp=pokerCompare(pr,ar);
+ if(cmp>0){p.playerChips+=p.pot;logArcade('🏆 ניצחת! '+pokerName(pr)+' מול '+pokerName(ar)+'. זכית בקופה של '+p.pot+'.');}
+ else if(cmp<0){p.aiChips+=p.pot;logArcade('🤖 היריב ניצח עם '+pokerName(ar)+' מול '+pokerName(pr)+'. הקופה: '+p.pot+'.');}
+ else{p.playerChips+=Math.floor(p.pot/2);p.aiChips+=Math.ceil(p.pot/2);logArcade('🤝 תיקו — הקופה התחלקה.');}
+ renderArcade();
+}
+function pokerAction(action){
+ const p=GAME_STATE.poker;
+ if(p.current!=='player')return;
+ if(action==='fold'){p.folded=true;p.aiChips+=p.pot;logArcade('פרשת מהיד. היריב לוקח את הקופה.');renderArcade();return;}
+ if(action==='call'){
+  const need=p.highestBet-p.playerBet;
+  const pay=Math.min(need,p.playerChips);p.playerChips-=pay;p.playerBet+=pay;p.pot+=pay;
+  if(p.playerBet===p.highestBet){p.current='ai';renderArcade();setTimeout(pokerAITurn,450);}
+  return;
+ }
+ if(action==='check'&&p.playerBet===p.highestBet){p.current='ai';renderArcade();setTimeout(pokerAITurn,450);return;}
+ if(action==='raise'){
+  const target=p.highestBet+20;const extra=target-p.playerBet;
+  if(p.playerChips<extra){logArcade('אין מספיק צ׳יפים להעלאה של 20.');return;}
+  p.playerChips-=extra;p.playerBet=target;p.highestBet=target;p.pot+=extra;
+  p.current='ai';renderArcade();setTimeout(pokerAITurn,450);
+ }
+}
+function pokerAITurn(){
+ const p=GAME_STATE.poker;if(p.folded)return;
+ const aiRank=pokerBest7([...p.aiHole,...p.community])||[0];
+ const need=p.highestBet-p.aiBet;
+ if(need>0&&aiRank[0]<1&&Math.random()<.25){p.folded=true;p.playerChips+=p.pot;logArcade('🤖 היריב פרש. זכית בקופה!');renderArcade();return;}
+ const pay=Math.min(need,p.aiChips);p.aiChips-=pay;p.aiBet+=pay;p.pot+=pay;
+ if(p.aiBet===p.highestBet){
+  if(Math.random()<.25&&p.aiChips>=20){p.aiChips-=20;p.aiBet+=20;p.highestBet=p.aiBet;p.pot+=20;logArcade('🤖 היריב העלה ב-20.');}
+  else logArcade('🤖 היריב השווה.');
+ }
+ p.current='player';
+ // if betting round is complete (both bets equal), reveal next street
+ if(p.playerBet===p.aiBet){
+  p.playerBet=0;p.aiBet=0;p.highestBet=0;
+  if(p.stage==='river')return pokerFinish();
+  pokerRevealStage();
+  logArcade(p.stage==='flop'?'פלופ נפתח.':p.stage==='turn'?'טרן נפתח.':'ריבר נפתח. התור שלך.');
+ }
+ renderArcade();
+}
+
+/* ---------- DURAK ---------- */
+function durakCanBeat(att,def){
+ if(def.s===att.s)return def.v>att.v;
+ return def.s===GAME_STATE.durak.trump&&att.s!==GAME_STATE.durak.trump;
+}
+function durakAllDefended(){
+ return GAME_STATE.durak.attack.length>0&&GAME_STATE.durak.attack.every((_,i)=>!!GAME_STATE.durak.defense[i]);
+}
+function durakAttack(){
+ const s=GAME_STATE.selected;
+ if(!s.length){logArcade('❌ בחר קלף אחד להתקפה.');return;}
+ if(s.length>1){logArcade('❌ בדורק ההתקפה מתבצעת קלף-קלף.');return;}
+ const c=GAME_STATE.hand[s[0]];
+ if(GAME_STATE.durak.attack.length&& !GAME_STATE.durak.attack.some(x=>x.r===c.r) && !GAME_STATE.durak.defense[GAME_STATE.durak.attack.findIndex(x=>x.r===c.r)]){
+  logArcade('❌ מותר להוסיף רק ערך שכבר נמצא על השולחן.');return;
+ }
+ GAME_STATE.durak.attack.push(c);GAME_STATE.hand.splice(s[0],1);GAME_STATE.selected=[];GAME_STATE.durak.phase='defend';
+ const idx=GAME_STATE.durak.attack.length-1;
+ const candidates=GAME_STATE.hand.filter(x=>durakCanBeat(c,x)).sort((a,b)=>a.v-b.v);
+ const ai=candidates[0];
+ if(ai){GAME_STATE.durak.defense[idx]=ai;GAME_STATE.hand.splice(GAME_STATE.hand.indexOf(ai),1);logArcade('🛡️ היריב כיסה את '+c.r+c.s+' עם '+ai.r+ai.s+'. אתה יכול להוסיף התקפה נוספת.');}
+ else{logArcade('🤖 היריב לא יכול לכסות. לחץ ״הגן/סיים״ כדי שייקח את הקלפים.');}
+ renderArcade();
+}
+function durakDefend(){
+ const d=GAME_STATE.durak;
+ if(!d.attack.length){logArcade('בחר קלף כדי להתחיל התקפה.');return;}
+ const undef=d.attack.findIndex((_,i)=>!d.defense[i]);
+ if(undef>=0){logArcade('🤖 המגן לא הצליח לכסות את כל הקלפים — הוא לוקח את הערימה.');d.defense={};d.phase='take';d.attacker='player';d.defender='ai';renderArcade();return;}
+ // successful defense: move table cards out and change attacker
+ const used=[...d.attack,...Object.values(d.defense)];
+ d.attack=[];d.defense={};GAME_STATE.deck.push(...used);d.phase='attack';d.attacker='player';d.defender='ai';
+ logArcade('🛡️ כל הקלפים כוסו. הסיבוב הסתיים — המשך לתקוף.');
+ renderArcade();
+}
+function durakTake(){
+ const d=GAME_STATE.durak;
+ if(d.phase!=='take')return;
+ // In this simplified heads-up flow the defender is AI, so it takes.
+ logArcade('היריב לוקח את הקלפים ומקבל אותם ליד.');
+ const taken=[...d.attack,...Object.values(d.defense)];GAME_STATE.opponent.push(...taken);
+ d.attack=[];d.defense={};d.phase='attack';d.attacker='player';d.defender='ai';renderArcade();
+}
+
+/* ---------- RENDER ---------- */
+function renderArcade(){
+ const t=document.getElementById('arcadeTable'),a=document.getElementById('arcadeActions');if(!t||!a)return;
+ if(GAME_STATE.type==='war'){
+  t.innerHTML='<div class="arcade-row"><div class="rankbox">הקלפים שלך: '+GAME_STATE.hand.length+'</div><div class="rankbox">קלפי היריב: '+GAME_STATE.opponent.length+'</div></div><div class="arcade-row" style="margin:35px 0">'+(GAME_STATE.warCards.map(x=>cardHTML(x)).join('')||'<div class="small">לחץ על ״קרב!״ כדי להפוך קלפים</div>')+'</div>';
+  a.innerHTML='<button id="warFight">⚔️ קרב!</button>';
+  document.getElementById('warFight').onclick=warFight;return;
+ }
+ if(GAME_STATE.type==='poker'){
+  const p=GAME_STATE.poker;
+  t.innerHTML='<div class="arcade-row"><div class="rankbox">הצ׳יפים שלך: '+p.playerChips+'</div><div class="rankbox">קופה: '+p.pot+'</div><div class="rankbox">צ׳יפים של היריב: '+p.aiChips+'</div></div>'+
+   '<div class="small">בליינדים: 10 / 20 · '+(p.stage==='preflop'?'Pre-flop':p.stage==='flop'?'Flop':p.stage==='turn'?'Turn':'River')+'</div>'+
+   '<div class="arcade-row" style="margin:15px 0"><div class="rankbox">קלפי היריב: 🂠 🂠</div></div>'+
+   '<div class="arcade-row" style="margin:15px 0">'+(p.community.map(x=>cardHTML(x)).join('')||'<div class="small">הפלופ ייפתח אחרי ההשוואה הראשונה.</div>')+'</div>'+
+   '<div class="arcade-hand">'+p.playerHole.map(x=>cardHTML(x)).join('')+'</div>';
+  if(p.folded){a.innerHTML='<button id="pokerNew">יד חדשה</button>';document.getElementById('pokerNew').onclick=()=>startArcade('poker');return;}
+  if(p.current==='player'){
+   const need=p.highestBet-p.playerBet;
+   a.innerHTML=(need===0?'<button id="pokerCheck">צ׳ק</button>':'<button id="pokerCall">השווה '+need+'</button>')+
+    '<button id="pokerRaise">העלה 20</button><button id="pokerFold" class="ghost">פרוש</button>';
+   if(need===0)document.getElementById('pokerCheck').onclick=()=>pokerAction('check');
+   else document.getElementById('pokerCall').onclick=()=>pokerAction('call');
+   document.getElementById('pokerRaise').onclick=()=>pokerAction('raise');
+   document.getElementById('pokerFold').onclick=()=>pokerAction('fold');
+  }else a.innerHTML='<div class="rankbox">🤖 תור היריב...</div>';
+  return;
+ }
+ if(GAME_STATE.type==='yaniv'){
+  t.innerHTML='<div class="arcade-row"><div class="rankbox">היריב: '+GAME_STATE.opponent.length+' קלפים</div><div class="rankbox">הניקוד שלך ביד: '+yanivSum(GAME_STATE.hand)+'</div></div><div class="small">מותר לזרוק: יחיד · אותו ערך · רצף מאותה סדרה</div><div class="arcade-hand">'+GAME_STATE.hand.map((x,i)=>cardHTML(x,GAME_STATE.selected.includes(i)?'selected':'').replace('class="arcade-card','data-i="'+i+'" class="arcade-card')).join('')+'</div>';
+  a.innerHTML='<button id="yanivDiscard">זרוק נבחרים</button><button id="yanivCall">📣 יניב!</button>';
+  t.querySelectorAll('.arcade-card[data-i]').forEach(el=>el.onclick=()=>{const i=+el.dataset.i;const q=GAME_STATE.selected.indexOf(i);if(q>=0)GAME_STATE.selected.splice(q,1);else GAME_STATE.selected.push(i);renderArcade();});
+  document.getElementById('yanivDiscard').onclick=yanivDiscard;document.getElementById('yanivCall').onclick=yanivCall;return;
+ }
+ if(GAME_STATE.type==='durak'){
+  const d=GAME_STATE.durak;
+  const table=d.attack.map((x,i)=>'<div style="display:flex;flex-direction:column;align-items:center">'+cardHTML(x)+(d.defense[i]?'<span class="small">⬆ '+cardHTML(d.defense[i])+'</span>':'<span class="small">❓ לא מכוסה</span>')+'</div>').join('');
+  t.innerHTML='<div class="arcade-row"><div class="rankbox">🛡️ שליט: <b>'+d.trump+'</b></div><div class="rankbox">שלך: '+GAME_STATE.hand.length+' קלפים</div><div class="rankbox">יריב: '+GAME_STATE.opponent.length+' קלפים</div></div><div class="small">תוקף מניח קלף. המגן חייב לשים קלף גבוה יותר מאותה סדרה או שליט. אפשר להוסיף רק ערכים שכבר על השולחן.</div><div class="arcade-row" style="margin:18px 0">'+(table||'<div class="small">השולחן ריק — בחר קלף מהיד ולחץ תקוף.</div>')+'</div><div class="arcade-hand">'+GAME_STATE.hand.map((x,i)=>cardHTML(x,GAME_STATE.selected.includes(i)?'selected':'').replace('class="arcade-card','data-i="'+i+'" class="arcade-card')).join('')+'</div>';
+  a.innerHTML='<button id="durakAttack">⚔️ תקוף</button><button id="durakDefend">🛡️ סיים הגנה</button>';
+  t.querySelectorAll('.arcade-card[data-i]').forEach(el=>el.onclick=()=>{const i=+el.dataset.i;const q=GAME_STATE.selected.indexOf(i);if(q>=0)GAME_STATE.selected.splice(q,1);else GAME_STATE.selected.push(i);renderArcade();});
+  document.getElementById('durakAttack').onclick=durakAttack;
+  document.getElementById('durakDefend').onclick=()=>{if(d.phase==='take')durakTake();else durakDefend();};
+  return;
+ }
+}
+function startArcade(type){
+ GAME_STATE.type=type;GAME_STATE.deck=makeDeck();GAME_STATE.hand=[];GAME_STATE.opponent=[];GAME_STATE.selected=[];GAME_STATE.warCards=[];GAME_STATE.durakTrump=null;
+ if(type==='poker'){pokerReset();document.getElementById('arcadeStatus').textContent='Texas Hold’em נגד AI';renderArcade();return;}
+ const n=type==='yaniv'?5:type==='war'?26:6;
+ for(let i=0;i<n;i++){GAME_STATE.hand.push(GAME_STATE.deck.pop());GAME_STATE.opponent.push(GAME_STATE.deck.pop());}
+ if(type==='durak'){
+  GAME_STATE.durak.trump=GAME_STATE.deck[0]?.s||'♠';GAME_STATE.durak.attack=[];GAME_STATE.durak.defense={};GAME_STATE.durak.phase='attack';GAME_STATE.durak.attacker='player';GAME_STATE.durak.defender='ai';
+ }
+ document.getElementById('arcadeStatus').textContent='משחק מול AI'+(adminCoinsUI()?' • 👑 מטבעות ללא הגבלה':'');
+ logArcade(type==='durak'?'🛡️ דורק: אתה תוקף. בחר קלף ולחץ תקוף.':type==='war'?'⚔️ הפוך קלף בלחיצה על קרב!':'המשחק התחיל. בחר מהלך.');
+ renderArcade();
+}
 document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=>{
  if(b.dataset.game==='divide'){
-  document.getElementById('arcade').style.display='none';
-  document.getElementById('arcade').classList.add('hidden');
+  document.getElementById('arcade').style.display='none';document.getElementById('arcade').classList.add('hidden');
+  document.getElementById('setup').style.display='flex';document.getElementById('setup').classList.remove('hidden');
   currentSelectedGame='divide';
- }else{
-  document.getElementById('arcade').classList.remove('hidden');
-  setArcade(b.dataset.game);
- }
+ }else{setArcade(b.dataset.game);}
 }));
-document.getElementById('arcadeExit')?.addEventListener('click',()=>{document.getElementById('arcade').style.display='none';});
-
-
+document.getElementById('arcadeExit')?.addEventListener('click',()=>{
+ document.getElementById('arcade').style.display='none';document.getElementById('arcade').classList.add('hidden');
+ document.getElementById('setup').style.display='flex';document.getElementById('setup').classList.remove('hidden');
+});
 /* =============== SOUND (procedural, no external assets) =============== */
 const Sound=(()=>{
  let ctx=null;
