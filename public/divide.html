@@ -536,7 +536,16 @@ function startArcade(type){GAME_STATE.type=type;GAME_STATE.deck=makeDeck();GAME_
  if(type==='durak')GAME_STATE.durakTrump=GAME_STATE.deck[0]?.s;
  document.getElementById('arcadeStatus').textContent='משחק מול AI • גרסת בטא'+(adminCoinsUI()?' • 👑 מטבעות ללא הגבלה':'');logArcade('המשחק התחיל. בחר מהלך.');renderArcade();}
 function warFight(){if(!GAME_STATE.hand.length||!GAME_STATE.opponent.length){logArcade('המשחק הסתיים!');return;}const a=GAME_STATE.hand.pop(),b=GAME_STATE.opponent.pop();GAME_STATE.warCards=[a,b];if(a.v>=b.v){GAME_STATE.hand.push(a,b);logArcade('ניצחת בקרב! הקלפים שלך.');}else{GAME_STATE.opponent.push(a,b);logArcade('היריב ניצח בקרב.');}renderArcade();}
-document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=>{setArcade(b.dataset.game);}));
+document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=>{
+ if(b.dataset.game==='divide'){
+  document.getElementById('arcade').style.display='none';
+  document.getElementById('arcade').classList.add('hidden');
+  currentSelectedGame='divide';
+ }else{
+  document.getElementById('arcade').classList.remove('hidden');
+  setArcade(b.dataset.game);
+ }
+}));
 document.getElementById('arcadeExit')?.addEventListener('click',()=>{document.getElementById('arcade').style.display='none';});
 
 /* ===== CARD FRONT SKINS ===== */
@@ -950,6 +959,8 @@ window.addEventListener('unhandledrejection',e=>recoverUIError(e.reason));
 
 /* =============== NEW GAME / COIN FLIP =============== */
 async function startNewGame(numPlayers){
+ document.getElementById('arcade').style.display='none';
+ document.getElementById('arcade').classList.add('hidden');
  Game.gen++; // invalidate any pending async work from a previous game
  const players=[{name:'אתה',hand:[],collected:[],active:true,isAI:false}];
  for(let i=1;i<numPlayers;i++) players.push({name:'AI '+i,hand:[],collected:[],active:true,isAI:true});
