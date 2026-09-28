@@ -824,6 +824,32 @@ function renderArcade(){
   return;
  }
 }
+// ARCADE_BUTTON_DELEGATION: robust touch/click handling for dynamically rendered buttons
+(function(){
+ const arcade=document.getElementById('arcade');
+ if(!arcade) return;
+ arcade.addEventListener('click',function(e){
+  const b=e.target.closest('button');
+  if(!b || !arcade.contains(b)) return;
+  const id=b.id;
+  const actions={
+   warFight:()=>warFight(),
+   yanivDiscard:()=>yanivDiscard(),
+   yanivCall:()=>yanivCall(),
+   pokerCheck:()=>pokerAction('check'),
+   pokerCall:()=>pokerAction('call'),
+   pokerRaise:()=>pokerAction('raise'),
+   pokerFold:()=>pokerAction('fold'),
+   pokerNew:()=>startArcade('poker'),
+   durakAttack:()=>durakAttack(),
+   durakDefend:()=>{const d=GAME_STATE.durak;if(d.phase==='take')durakTake();else durakDefend();}
+  };
+  if(!actions[id]) return;
+  e.preventDefault();
+  e.stopImmediatePropagation();
+  actions[id]();
+ },true);
+})();
 function startArcade(type){
  GAME_STATE.type=type;GAME_STATE.deck=makeDeck();GAME_STATE.hand=[];GAME_STATE.opponent=[];GAME_STATE.selected=[];GAME_STATE.warCards=[];GAME_STATE.durakTrump=null;
  if(type==='poker'){pokerReset();document.getElementById('arcadeStatus').textContent='Texas Hold’em נגד AI';renderArcade();return;}
