@@ -806,6 +806,7 @@ const Game={
   const rel=Rules.getRelevantCard(this.pile);
   if(!Array.isArray(cards)||!cards.length||!cards.every(c=>p.hand.some(h=>h.id===c.id))||!Rules.isValidPlay(cards,rel)){
    Sound.error();
+   if(p.isAI) await this.exitPlayer(pIdx);
    return;
   }
   this.busy=true;
@@ -931,6 +932,7 @@ const Game={
     if(myGen!==this.gen || this.phase!=='playing') return; // stale-timer guard
     const mv=AI.chooseMove(p.hand,rel);
     if(mv) this.playCards(this.currentPlayer,mv);
+    else this.exitPlayer(this.currentPlayer);
    },650);
   } else {
    UIRender();
