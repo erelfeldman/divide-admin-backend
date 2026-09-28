@@ -628,9 +628,17 @@ function warFight(){
    if(x.v>y.v){GAME_STATE.hand.unshift(...war);GAME_STATE.warWinner='player';done=true;}
    else if(y.v>x.v){GAME_STATE.opponent.unshift(...war);GAME_STATE.warWinner='ai';done=true;}
   }
-  logArcade(done?(GAME_STATE.warWinner==='player'?'🔥 מלחמה! ניצחת ואספת את כל הקלפים.':'🔥 מלחמה! היריב ניצח ואסף את הקלפים.'):'🔥 מלחמה — אין מספיק קלפים להמשיך.');
+  logArcade(done?(GAME_STATE.warWinner==='player'?'🔥 מלחמה! ניצחת ואספת את כל הקלפים.':'🔥 מלחמה! היריב ניצח ואסף את כל הקלפים.'):'🔥 מלחמה — אין מספיק קלפים להמשיך.');
  }
  renderArcade();
+ // The face-up cards belong only to this battle; don't leave an old opponent
+ // card visible across later rounds.
+ setTimeout(()=>{
+  if(GAME_STATE.type==='war'){
+   GAME_STATE.warCards=[];
+   renderArcade();
+  }
+ },1200);
 }
 
 /* ---------- TEXAS HOLD'EM ---------- */
