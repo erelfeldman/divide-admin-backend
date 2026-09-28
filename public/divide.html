@@ -1018,10 +1018,11 @@ function UIRender(){
  const hand=document.getElementById('hand'); hand.innerHTML='';
  const human=G.players[0];
  const humanTurn = G.phase==='playing' && G.currentPlayer===0 && human.active;
+ const selectionValid = G.selected.length>0 && Rules.isValidPlay(G.selected,rel);
  human.hand.forEach(c=>{
   const sel = G.selected.find(x=>x.id===c.id);
   const playable = humanTurn && Rules.isValidSingle(c,rel);
-  const el=cardEl(c, !!sel, playable && !sel ? 'playable':'');
+  const el=cardEl(c, !!sel, (playable || (!!sel && humanTurn)) && !sel ? 'playable':'');
   if(sel){ const b=document.createElement('div'); b.className='badge'; b.textContent=G.selected.indexOf(sel)+1; el.appendChild(b); }
   if(humanTurn) el.onclick=()=>{
    if(Game.busy) return;
