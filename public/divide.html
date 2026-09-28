@@ -275,7 +275,15 @@ input[type=range]{accent-color:var(--gold)}
  .card:after{border-radius:6px}
 }
 
-</style>/* ===== CARD FRONT SKINS ===== */
+/* Keep the playable hand above decorative table layers and make every card
+   reliably clickable on touch and mouse devices. */
+#game{position:relative;isolation:isolate}
+#hand{position:relative;z-index:500!important;pointer-events:auto!important;touch-action:manipulation}
+#hand .card{position:relative;z-index:501;pointer-events:auto!important;touch-action:manipulation}
+#hand .card *{pointer-events:none!important}
+#controls{position:relative;z-index:600!important;pointer-events:auto!important}
+
+/* ===== CARD FRONT SKINS ===== */
 .card[data-card-theme]{isolation:isolate}
 .card[data-card-theme] .card-art{position:absolute;inset:0;z-index:-1;opacity:.18;pointer-events:none}
 .card[data-card-theme="classic"]{background:linear-gradient(145deg,#fffefa,#f4f0e6)}
@@ -290,8 +298,6 @@ input[type=range]{accent-color:var(--gold)}
 .card[data-card-theme="neon"] .card-art{opacity:.3}
 .theme-rarity{font-size:.72em;font-weight:900;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
 .theme-preview-card{width:76px;height:108px;border-radius:12px;margin:0 auto 10px;display:flex;flex-direction:column;justify-content:space-between;padding:7px 8px;font-weight:900;box-shadow:0 8px 18px rgba(0,0,0,.3);text-align:left}
-
-<style>
 .brand-mark{width:58px;height:58px;display:grid;place-items:center;margin-top:4px;border:1px solid rgba(244,208,111,.45);border-radius:18px;color:var(--gold);font-size:1.7rem;background:rgba(244,208,111,.06);box-shadow:0 0 30px rgba(244,208,111,.08);transform:rotate(45deg)}
 .brand-mark::first-letter{transform:rotate(-45deg)}
 .table-label,.hand-label,.pile-label{font-size:.68rem;letter-spacing:.22em;color:rgba(244,208,111,.62);font-weight:800}
@@ -1290,12 +1296,27 @@ Settings.apply();
 renderShop();
 renderProfile();
 applyLanguage(currentLang);
+
+// Admin gift controls are wired inside the page script so they are available
+// immediately after the DOM is parsed and always use the current auth token.
+document.getElementById('giftSend')?.addEventListener('click',async()=>{
+ const googleSub=document.getElementById('giftUser')?.value;
+ const coins=Number(document.getElementById('giftCoins')?.value||0);
+ const theme=document.getElementById('giftTheme')?.value||'';
+ const out=document.getElementById('giftStatus');
+ if(!out)return;
+ if(!googleSub){out.textContent='בחר משתמש';return;}
+ if(!coins&&!theme){out.textContent='בחר מתנה';return;}
+ try{
+  const r=await fetch('/api/admin/gift',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify({googleSub,coins,theme})});
+  const d=await r.json();
+  if(!r.ok)throw new Error(d.error||'failed');
+  out.textContent='נשלח בהצלחה 🎁';
+  document.getElementById('giftCoins').value=0;
+  document.getElementById('giftTheme').value='';
+  await loadAdminUsers();
+ }catch(e){out.textContent='השליחה נכשלה: '+e.message;}
+});
 </script>
 <script>if("serviceWorker" in navigator){navigator.serviceWorker.register("/sw.js").catch(()=>{});}</script></body>
-</html><script>
-document.addEventListener('DOMContentLoaded',()=>document.getElementById('giftSend')?.addEventListener('click',async()=>{
- const googleSub=document.getElementById('giftUser').value,coins=Number(document.getElementById('giftCoins').value||0),theme=document.getElementById('giftTheme').value;
- const out=document.getElementById('giftStatus');if(!googleSub){out.textContent='בחר משתמש';return;}if(!coins&&!theme){out.textContent='בחר מתנה';return;}
- try{const r=await fetch('/api/admin/gift',{method:'POST',headers:{'Content-Type':'application/json',Authorization:'Bearer '+authToken},body:JSON.stringify({googleSub,coins,theme})});const d=await r.json();if(!r.ok)throw new Error(d.error||'failed');out.textContent='נשלח בהצלחה 🎁';document.getElementById('giftCoins').value=0;document.getElementById('giftTheme').value='';loadAdminUsers();}catch(e){out.textContent='השליחה נכשלה: '+e.message;}
-}));
-</script>
+</html>
