@@ -275,7 +275,22 @@ input[type=range]{accent-color:var(--gold)}
  .card:after{border-radius:6px}
 }
 
-</style>
+</style>/* ===== CARD FRONT SKINS ===== */
+.card[data-card-theme]{isolation:isolate}
+.card[data-card-theme] .card-art{position:absolute;inset:0;z-index:-1;opacity:.18;pointer-events:none}
+.card[data-card-theme="classic"]{background:linear-gradient(145deg,#fffefa,#f4f0e6)}
+.card[data-card-theme="dark"]{background:radial-gradient(circle at 50% 35%,#4a4a4a,#111 70%);color:#f4f4f4;border-color:#777}
+.card[data-card-theme="fire"]{background:radial-gradient(circle at 50% 75%,#ffcf66 0,#e85d20 28%,#7e1010 72%,#250607 100%);color:#fff7e0;border-color:#ffb43d}
+.card[data-card-theme="ice"]{background:radial-gradient(circle at 30% 20%,#fff,#bdefff 35%,#4ca5d8 75%,#16456b);color:#06253b;border-color:#d9f8ff}
+.card[data-card-theme="galaxy"]{background:radial-gradient(circle at 30% 25%,#fff 0 1px,transparent 2px),radial-gradient(circle at 75% 65%,#fff 0 1px,transparent 2px),radial-gradient(circle at 50% 50%,#8d5cff,#24105f 55%,#09031d);background-size:42px 37px,53px 47px,auto;color:#fff;border-color:#b994ff}
+.card[data-card-theme="neon"]{background:linear-gradient(135deg,#101018,#24102b 45%,#071d25);color:#fff;border-color:#58f7ff;box-shadow:0 8px 18px rgba(0,0,0,.34),0 0 18px rgba(0,229,255,.22)}
+.card[data-card-theme="fire"] .card-art{opacity:.28}
+.card[data-card-theme="ice"] .card-art{opacity:.25}
+.card[data-card-theme="galaxy"] .card-art{opacity:.35}
+.card[data-card-theme="neon"] .card-art{opacity:.3}
+.theme-rarity{font-size:.72em;font-weight:900;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
+.theme-preview-card{width:76px;height:108px;border-radius:12px;margin:0 auto 10px;display:flex;flex-direction:column;justify-content:space-between;padding:7px 8px;font-weight:900;box-shadow:0 8px 18px rgba(0,0,0,.3);text-align:left}
+
 <style>
 .brand-mark{width:58px;height:58px;display:grid;place-items:center;margin-top:4px;border:1px solid rgba(244,208,111,.45);border-radius:18px;color:var(--gold);font-size:1.7rem;background:rgba(244,208,111,.06);box-shadow:0 0 30px rgba(244,208,111,.08);transform:rotate(45deg)}
 .brand-mark::first-letter{transform:rotate(-45deg)}
@@ -550,21 +565,6 @@ document.querySelectorAll('.gamepick').forEach(b=>b.addEventListener('click',()=
 }));
 document.getElementById('arcadeExit')?.addEventListener('click',()=>{document.getElementById('arcade').style.display='none';});
 
-/* ===== CARD FRONT SKINS ===== */
-.card[data-card-theme]{isolation:isolate}
-.card[data-card-theme] .card-art{position:absolute;inset:0;z-index:-1;opacity:.18;pointer-events:none}
-.card[data-card-theme="classic"]{background:linear-gradient(145deg,#fffefa,#f4f0e6)}
-.card[data-card-theme="dark"]{background:radial-gradient(circle at 50% 35%,#4a4a4a,#111 70%);color:#f4f4f4;border-color:#777}
-.card[data-card-theme="fire"]{background:radial-gradient(circle at 50% 75%,#ffcf66 0,#e85d20 28%,#7e1010 72%,#250607 100%);color:#fff7e0;border-color:#ffb43d}
-.card[data-card-theme="ice"]{background:radial-gradient(circle at 30% 20%,#fff,#bdefff 35%,#4ca5d8 75%,#16456b);color:#06253b;border-color:#d9f8ff}
-.card[data-card-theme="galaxy"]{background:radial-gradient(circle at 30% 25%,#fff 0 1px,transparent 2px),radial-gradient(circle at 75% 65%,#fff 0 1px,transparent 2px),radial-gradient(circle at 50% 50%,#8d5cff,#24105f 55%,#09031d);background-size:42px 37px,53px 47px,auto;color:#fff;border-color:#b994ff}
-.card[data-card-theme="neon"]{background:linear-gradient(135deg,#101018,#24102b 45%,#071d25);color:#fff;border-color:#58f7ff;box-shadow:0 8px 18px rgba(0,0,0,.34),0 0 18px rgba(0,229,255,.22)}
-.card[data-card-theme="fire"] .card-art{opacity:.28}
-.card[data-card-theme="ice"] .card-art{opacity:.25}
-.card[data-card-theme="galaxy"] .card-art{opacity:.35}
-.card[data-card-theme="neon"] .card-art{opacity:.3}
-.theme-rarity{font-size:.72em;font-weight:900;letter-spacing:.08em;text-transform:uppercase;opacity:.9}
-.theme-preview-card{width:76px;height:108px;border-radius:12px;margin:0 auto 10px;display:flex;flex-direction:column;justify-content:space-between;padding:7px 8px;font-weight:900;box-shadow:0 8px 18px rgba(0,0,0,.3);text-align:left}
 
 /* =============== SOUND (procedural, no external assets) =============== */
 const Sound=(()=>{
