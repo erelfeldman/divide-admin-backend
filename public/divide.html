@@ -931,6 +931,29 @@ const Game={
 };
 function sleep(ms){ return new Promise(res=>setTimeout(res,ms)); }
 
+// Global recovery for unexpected async/UI errors.
+// A failed animation or promise must never leave the game locked or an invisible overlay
+// sitting above the interface and intercepting every click.
+function recoverUIError(err){
+ console.error('Divide UI recovery:',err);
+ try{
+  document.querySelectorAll('#banner,#coinflip').forEach(x=>x.remove());
+  if(typeof Game!=='undefined'){
+   Game.busy=false;
+   if(Game.phase==='dealing'||Game.phase==='roundend') Game.phase='playing';
+   if(Game.phase==='playing'){
+    Game.selected=Array.isArray(Game.selected)?Game.selected:[];
+    UIRender();
+    setTimeout(()=>{try{Game.loop();}catch(e){console.error(e)}},0);
+   }
+  }
+ }catch(e){console.error('Divide recovery failed:',e);}
+}
+window.addEventListener('error',e=>recoverUIError(e.error||e.message));
+window.addEventListener('unhandledrejection',e=>recoverUIError(e.reason));
+
+
+
 /* =============== NEW GAME / COIN FLIP =============== */
 async function startNewGame(numPlayers){
  Game.gen++; // invalidate any pending async work from a previous game
