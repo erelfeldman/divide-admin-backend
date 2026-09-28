@@ -36,6 +36,9 @@ button.sel{background:#fff;outline:3px solid var(--gold)}
 button:disabled{opacity:.4;cursor:not-allowed;box-shadow:none}
 button.ghost{background:transparent;border:2px solid var(--gold);color:var(--gold);box-shadow:none}
 .btnrow{display:flex;gap:10px;flex-wrap:wrap;justify-content:center}
+/* Never let visual overlays/animations block the game controls. */
+#banner,#coinflip{pointer-events:none!important}
+#banner *,#coinflip *{pointer-events:none!important}
 /* ---- setup / menu ---- */
 #setup{display:flex;flex-direction:column;align-items:center;justify-content:flex-start;min-height:100%;gap:14px;text-align:center;padding:24px 14px}
 #setup h1{font-size:2.4em;color:var(--gold);margin:6px 0;text-shadow:0 2px 6px rgba(0,0,0,.5)}
@@ -791,48 +794,37 @@ const Game={
  async playCards(pIdx,cards){
   if(this.busy || this.phase!=='playing' || this.currentPlayer!==pIdx) return;
   const p=this.players[pIdx];
-  const relBefore=Rules.getRelevantCard(this.pile);
-  const validIds=Array.isArray(cards)&&cards.length>0&&cards.every(c=>p.hand.some(h=>h.id===c.id));
-  if(!validIds || !Rules.isValidPlay(cards,relBefore)){
-   toast('מהלך לא חוקי — הדרישה היא '+(relBefore.t==='free'?'פתוחה':relBefore.v));
-   if(p.isAI){ await this.exitPlayer(pIdx); }
+  const rel=Rules.getRelevantCard(this.pile);
+  if(!Array.isArray(cards)||!cards.length||!cards.every(c=>p.hand.some(h=>h.id===c.id))||!Rules.isValidPlay(cards,rel)){
+   Sound.error();
    return;
   }
-
   this.busy=true;
   try{
    this.selected=[];
    for(const c of cards){
     const idx=p.hand.findIndex(h=>h.id===c.id);
-    if(idx<0) throw new Error('Card disappeared from hand');
+    if(idx<0) continue;
     p.hand.splice(idx,1);
     this.pile.push(c);
    }
    UIRender();
-   if(cards.length>1) toast(`${p.name} הניחו/ה שילוב: ${cards.map(c=>rankLabel(c.r)).join(' + ')}`);
-   else toast(`${p.name} הניח/ה ${rankLabel(cards[0].r)}${cards[0].s}`);
-   Sound.play();
-   const played=cards[cards.length-1];
-   if(played.r===14) toast('אס! הדרישה אופסה — מהלך פתוח');
-   else if(played.r===2 && relBefore.t!=='free') toast(`2 משקף — עדיין מתייחסים ל-${relBefore.v}`);
-
-   await sleep(250);
-
-   if(this.activeCount()===1){
+   await sleep(120);
+   if(this.activeCount()<=1){
     this.busy=false;
-    await this.endRound(pIdx);
-   }else{
-    this.busy=false;
-    this.currentPlayer=this.nextActivePlayer(pIdx);
+    return await this.endRound(pIdx);
+   }
+   this.currentPlayer=this.nextActivePlayer(pIdx);
+   this.busy=false;
+   UIRender();
+   this.loop();
+  }catch(err){
+   console.error(err);
+   this.busy=false;
+   if(this.phase==='playing') {
     UIRender();
     this.loop();
    }
-  }catch(err){
-   console.error('Divide playCards error:',err);
-   this.busy=false;
-   toast('אירעה תקלה במהלך המהלך — המשחק ממשיך');
-   UIRender();
-   if(this.phase==='playing') this.loop();
   }
  },
 
@@ -841,26 +833,19 @@ const Game={
   this.busy=true;
   try{
    this.players[pIdx].active=false;
-   toast(`${this.players[pIdx].name} יצא/ה מהסבב (אין מהלך חוקי)`);
-   UIRender();
-   await sleep(400);
-
-   if(this.activeCount()===1){
+   if(this.activeCount()<=1){
     const w=this.players.findIndex(p=>p.active);
     this.busy=false;
-    await this.endRound(w);
-   }else{
-    this.busy=false;
-    this.currentPlayer=this.nextActivePlayer(pIdx);
-    UIRender();
-    this.loop();
+    return await this.endRound(w);
    }
-  }catch(err){
-   console.error('Divide exitPlayer error:',err);
+   this.currentPlayer=this.nextActivePlayer(pIdx);
    this.busy=false;
-   toast('אירעה תקלה במעבר תור — המשחק ממשיך');
    UIRender();
-   if(this.phase==='playing') this.loop();
+   this.loop();
+  }catch(err){
+   console.error(err);
+   this.busy=false;
+   if(this.phase==='playing'){ UIRender(); this.loop(); }
   }
  },
 
